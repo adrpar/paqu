@@ -1,0 +1,35 @@
+To install
+----------
+
+1) Download the mysql source corresponding to your installed
+   version. Building mysql from scratch is recommended.
+
+   Note: ONLY MYSQL VERSION 5.5 AND ABOVE ARE CURRENTLY 
+   	 SUPPORTED
+
+2) edit CMakeList.txt accordingly to point to the directory 
+   where mysql is installed.
+
+3) edit CMakeList.txt accordingly to point to the directory
+   of the mysql sources
+
+4) mkdir build
+   cd build
+
+5) cmake ..
+
+6) make
+
+7) make install
+
+8) log into mysql server as root and execute the commands in 
+   install_jobMon.sql
+
+   This will setup the neccessary tables, install the plugin
+   and create all the UDFs needed to administer the queue.
+
+9) set the paqu_headNodeConnection global variable either on the running server
+   or the my.cnf to the connection string of the head node.
+
+10) DONE
+

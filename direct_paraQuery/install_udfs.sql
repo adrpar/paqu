@@ -1,0 +1,1 @@
+CREATE FUNCTION paraQuery RETURNS STRING SONAME 'udf_directparaquery.so';

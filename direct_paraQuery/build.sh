@@ -1,0 +1,1 @@
+g++ -o udf_directparaquery.so *.cc `/usr/local/mysql/bin/mysql_config --cflags` -O3 -DNSHARD=10 -shared -fPIC -I/opt/phpembed/include -I/opt/php54embed/include/php/sapi/embed/ -I/opt/php54embed/include/php/ -I/opt/php54embed/include/php/Zend/ -I/opt/php54embed/include/php/TSRM/ -I/opt/php54embed/include/php/main/ -L/opt/phpembed/lib -L/opt/php54embed/lib -lphpembed
