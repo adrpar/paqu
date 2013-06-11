@@ -41,3 +41,18 @@ To install
 
 8) log into mysql server as root and execute the commands in 
    install_paquUDF.sql
+
+How to use
+----------
+
+udf_sum_of_squares:
+
+sum_of_squares(number)
+
+
+udf_partitAdd_sum_of_squares:
+
+partitadd_sum_of_sqares(PART_M2, PART_MEAN, PART_COUNT)
+ * - par1: PART_M2:	the sum of squares for a given partition
+ * - par2: PART_MEAN:	the mean for a given partition
+ * - par3: PART_COUNT:	the number of elements in the partition
