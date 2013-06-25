@@ -87,8 +87,13 @@ function parseSqlAll($sql, $mysqlConn = false, $zendAdapter = false) {
  * SELECT statement.
  */
 function processQueryWildcard($sql, $mysqlConn = false, $zendAdapter = false) {
-    $sqlTree = new PHPSQLParser($sql);
-    
+	//it could be, that we are using the newest version of the SQL parser that is included
+	//somewhere else already... If not, use the one we provide
+	if(!class_exists("PHPSQLParser"))
+    	$sqlTree = new PHPSQLParser2($sql);
+    else
+    	$sqlTree = new PHPSQLParser($sql);
+
     _parseSqlAll_FROM($sqlTree->parsed, $mysqlConn, $zendAdapter);
     _parseSqlAll_WHERE($sqlTree->parsed, $mysqlConn, $zendAdapter);
     _parseSqlAll_SELECT($sqlTree->parsed, $mysqlConn, $zendAdapter);

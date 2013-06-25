@@ -67,6 +67,7 @@ class ParallelQuery {
     private $connection = false;
 
     private $checkOnDB = true;                          //!< Run checks on DB or has query already been validated elsewhere 
+    private $addRowNumbersToFinalTable = false;         //!< Adds row numbers to final result table
 
     function __construct() {
 	$this->queryInput = "";
@@ -104,6 +105,10 @@ class ParallelQuery {
 
     function setCheckOnDB($value) {
         $this->checkOnDB = $value;
+    }
+
+    function setAddRowNumbersToFinalTable($value) {
+        $this->addRowNumbersToFinalTable = $value;
     }
 
     /**
@@ -231,7 +236,7 @@ class ParallelQuery {
     	$shard_query = PHPSQLprepareQuery($this->queryInput);
 
     	try {
-    	    $this->shardedQueries = PHPSQLqueryPlanWriter($shard_query, $resultTable);
+    	    $this->shardedQueries = PHPSQLqueryPlanWriter($shard_query, $resultTable, $this->addRowNumbersToFinalTable);
     	} catch (Exception $error) {
     	    throw new Exception("ParallelQuery: Error\n\n" . $error->getMessage() . "\n");
     	}

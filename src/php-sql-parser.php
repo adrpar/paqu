@@ -543,11 +543,10 @@ EOREGEX
 							$out['OPTIONS'][] = 'WITH ROLLUP';
 							continue 2;
 						}
-					break;
-		
+						break;
 		
 					case 'AS':
-					break;
+						break;
 		
 					case '':
 					case ',':
@@ -783,10 +782,19 @@ EOREGEX
 			if(!$alias) {
 				$base_expr=join("", $tokens);
 				$alias = $base_expr;
+
+				if($prev['expr_type'] == 'function' ||
+				   $prev['expr_type'] == 'aggregate_function') {
+					$alias = str_replace(".", "__", $base_expr);
+		            $alias = str_replace("(", "_", $alias);
+		            $alias = str_replace(")", "_", $alias);
+		            $alias = str_replace(" ", "_", $alias);
+		            $alias = "_" . $alias . "_";
+				}
 			}
 		
 			/* Properly escape the alias if it is not escaped */
-		        if ($alias[0] != '`') {
+		    if ($alias[0] != '`') {
 			    $alias = '`' . str_replace('`','``',$alias) . '`';
 			} else {
 			    $alias = '`' . str_replace('`', '', $alias) . '`';
