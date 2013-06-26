@@ -29,7 +29,7 @@
 
 error_reporting(E_ALL);
 
-require_once 'shard-query-parallel.php';
+include_once 'shard-query-parallel.php';
 
 /**
  * @file queryPlanWriter.php

@@ -122,35 +122,6 @@ class ShardQuery {
                 $alias = "_" . $this->buildEscapedString(array($clause));
         	}
 
-    /**
-     * Function that will recursively go through the branch at the function to
-     * construct the escaped column name
-     * @param array $inNode SQL parse tree node
-     * @return string parts of the escaped function name
-     */
-    function buildEscapedString($inNode) {
-        $str = "";
-
-        foreach ($inNode as $currNode) {
-            $partStr = "";
-
-            if (array_key_exists("sub_tree", $currNode) && $currNode["sub_tree"] !== false) {
-                $partStr = $this->buildEscapedString($currNode["sub_tree"]);
-            }
-
-            $partStr = str_replace(".", "__", $partStr);
-
-            if ($currNode["expr_type"] === "aggregate_function" ||
-                    $currNode['expr_type'] === "function") {
-                $str .= $currNode["base_expr"] . "_" . $partStr;        #last "_" already added below
-            } else {
-                $str .= $currNode["base_expr"] . "_";
-            }
-        }
-
-        return $str;
-    }
-
 		    $base_expr = $clause['base_expr'];
 
 		    switch ($clause['expr_type']) {
