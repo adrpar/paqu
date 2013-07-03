@@ -114,6 +114,16 @@ $shard_query = "select Mvir FROM MDR1.BDMV WHERE snapnum = 85 and (x between -20
 		$time = $paraQuery->executeQuery();
 		echo "Query time: " . (string)$time . "\n";
 
+		$shard_query = "select distinct f.snapnum, r.zred from MDR1.FOF f, (select * from MDR1.redshifts) r where f.snapnum = r.snapnum group by f.snapnum";
+		$paraQuery = new ParallelQuery();
+		$paraQuery->setSQL($shard_query);
+		$paraQuery->generateParallelQueryPlan('spider_tmp_shard.result5');
+		$paraQuery->printParallelQueryPlanOptimisations();
+		$paraQuery->printParallelQueryPlan();
+		$paraQuery->translateQueryPlan();
+		$time = $paraQuery->executeQuery();
+		echo "Query time: " . (string)$time . "\n";
+
 		$shard_query = "select halos.bdmid, halos.Mvir from MDR1.BDMV halos where halos.snapnum=85 order by halos.Mvir desc limit 100";
 		$paraQuery = new ParallelQuery();
 		$paraQuery->setSQL($shard_query);
@@ -155,6 +165,16 @@ $shard_query = "select Mvir FROM MDR1.BDMV WHERE snapnum = 85 and (x between -20
 		echo "Query time: " . (string)$time . "\n";
 
 		$shard_query = "select mt.* from MDR1.FOFMtree mt, (select tree.* from MDR1.FOFMtree tree, (select fofId from MDR1.FOF where snapnum=85 order by mass desc limit 2) as h where tree.fofId = h.fofId) as fL where mt.fofTreeId between fL.fofTreeId and fL.lastProgId";
+		$paraQuery = new ParallelQuery();
+		$paraQuery->setSQL($shard_query);
+		$paraQuery->generateParallelQueryPlan('spider_tmp_shard.result10');
+		$paraQuery->printParallelQueryPlanOptimisations();
+		$paraQuery->printParallelQueryPlan();
+		$paraQuery->translateQueryPlan();
+		$time = $paraQuery->executeQuery();
+		echo "Query time: " . (string)$time . "\n";
+
+		$shard_query = "select * from Bolshoi.particles416 where x=0.998373 or y=0.998373 or z=0.998373";
 		$paraQuery = new ParallelQuery();
 		$paraQuery->setSQL($shard_query);
 		$paraQuery->generateParallelQueryPlan('spider_tmp_shard.result10');

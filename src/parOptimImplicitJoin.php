@@ -2010,22 +2010,11 @@ function PHPSQLParseWhereTokens_groupTerms($tree, &$newTree) {
   }
 
   foreach ($tree as $token) {
-
-    #check if there is a subtree. if yes, parse - but handle subqueries differntly
-    if (is_array($token['sub_tree'])) {
-      //anything in here is an "expression" - the old code had a check for "subquery" - why, i cant remember
-      $currSubTree = array();
-      PHPSQLParseWhereTokens_groupTerms($token['sub_tree'], $currSubTree);
-
-      PHPSQLParseWhereTokens_createBaseExpr($currSubTree);
-
-      array_push($newTree['sub_tree'], $currSubTree);
-
-      continue;
-    }
+    //NOTE: Subqueries are treated as normal terms in this context.
 
     #a normal node - if this node is an AND or OR, split there
-    if($token['expr_type'] === "operator" &&
+    if(array_key_exists('expr_type', $token) && 
+        $token['expr_type'] === "operator" &&
         ($token['base_expr'] === "or" || $token['base_expr'] === "and")) {
 
       //is this the and in the between clause? if yes, ignore this
@@ -2052,7 +2041,8 @@ function PHPSQLParseWhereTokens_groupTerms($tree, &$newTree) {
     }
 
     //is this a between case?
-    if($token['expr_type'] === "operator" &&
+    if(array_key_exists('expr_type', $token) && 
+        $token['expr_type'] === "operator" &&
         $token['base_expr'] === "between") {
       
       $isBetween = true;
@@ -2079,240 +2069,6 @@ function PHPSQLParseWhereTokens_createBaseExpr(&$currLeaf) {
     $currLeaf['base_expr'] .= $node['base_expr'] . " ";
   }
   $currLeaf['base_expr'] .= ")";
-}
-
-/**
- * @brief This function takes the parse tree, looks at the where clause and puts brackets around each logical element.
- * @param tree SQL query tree node
- * @param newTree where the rewritten tree is written to
- * 
- * This function takes the parse tree, looks at the where clause and puts brackets around each logical element.
- */
-function PHPSQLParseWhereTokensOLD($tree, &$newTree) {
-  $returnArray = array();
-
-    #go through the where tree, find the terms and construct a new one
-  $currTermExpr = "";
-  $currTerm = array();
-  $currSubTerm = array();
-  $termOpen = false;
-  $betweenTerm = false;
-  $subTreesOpen = false;
-  $termType = "";
-  $numArithOperators = 0;
-    $andPartOfOperator = false;  #to handle stuff like "between foo and bar"
-    foreach ($tree as $token) {
-	#check if there is a subtree. if yes, parse - but handle subqueries differntly
-     if (is_array($token['sub_tree'])) {
-       if ($token['expr_type'] == 'subquery') {
-        $currTerm['base_expr'] .= $token['base_expr'] . " ";
-        array_push($currTerm['sub_tree'], $token);
-      } else {
-        $currSubTree = array();
-        PHPSQLParseWhereTokens($token['sub_tree'], $currSubTree);
-
-        if ($termOpen === false) {
-		    #open a new term
-          $termOpen = true;
-          $currTerm['expr_type'] = 'expression';
-          $currTerm['base_expr'] = '';
-          $currTerm['sub_tree'] = array();
-        }
-
-        $currExpr = "( ";
-          foreach ($currSubTree as $strToken) {
-            $currExpr .= trim($strToken['base_expr'], "()") . " ";
-          }
-
-          $token['base_expr'] = $currExpr . ")";
-$token['sub_tree'] = $currSubTree[0]['sub_tree'];
-
-if ($subTreesOpen === true) {
-		    #close subtree
-		    #clean up things, we have set this above and dont need it twice in the tree
-  array_push($currSubTerm['sub_tree'], $token);
-  $currSubTerm['base_expr'] .= $token['base_expr'] . " )";
-array_push($returnArray, $currSubTerm);
-
-$subTreesOpen = false;
-$termOpen = false;
-} else {
-  if ($numArithOperators > 0) {
-   $numArithOperators--;
-
-   if (empty($currTerm['base_expr'])) {
-     $currTerm['base_expr'] = $token['base_expr'];
-   } else {
-     $currTerm['base_expr'] .= $token['base_expr'];
-   }
-   array_push($currTerm['sub_tree'], $token);
- } else if ($betweenTerm === true) {
-   $currTerm['base_expr'] .= $token['base_expr'] . " ";
-   array_push($currTerm['sub_tree'], $token);
- } else {
-   $termOpen = false;
-
-   if (empty($currTerm['base_expr'])) {
-     $currTerm['base_expr'] = $token['base_expr'];
-   } else {
-     $currTerm['base_expr'] .= $token['base_expr'];
-   }
-   array_push($returnArray, $token);
-
-			#has to be here in order to get subTerms correctly (TODO: maybe this can be solved differently, but no nerves today)
-   array_push($currTerm['sub_tree'], $token);
- }
-}
-}
-} else {
- switch ($token['expr_type']) {
-  case 'colref':
-  case 'const':
-  case 'function':
-  if ($termOpen === false) {
-			#open a new term
-   $termOpen = true;
-   $currTerm['expr_type'] = 'expression';
-   $currTerm['base_expr'] = '( ';
-     $currTerm['sub_tree'] = array();
-   }
-
-   if($token['expr_type'] != 'function') {
-     $currTerm['base_expr'] .= $token['base_expr'] . " ";
-   } else {
-     $currTerm['base_expr'] .= $token['base_expr'];
-   }
-   array_push($currTerm['sub_tree'], $token);
-   break;
-   case 'operator':
-   switch (strtoupper($token['base_expr'])) {
-     case 'BETWEEN':
-     if ($termOpen === false) {
-				#this means, that there is a crutial term missing here
-				#take the last term from the tree and bind to the between
-				#statement
-      $tmpTerm = array_pop($returnArray);
-      
-				#open a new term
-      $termOpen = true;
-      $currTerm['expr_type'] = 'expression';
-      $currTerm['base_expr'] = '( ';
-        $currTerm['sub_tree'] = array();
-        
-        if($tmpTerm) {
-          $currTerm['base_expr'] .= $tmpTerm['base_expr'] . " ";
-          array_push($currTerm['sub_tree'], $tmpTerm);
-        }
-      }
-
-      $betweenTerm = true;
-      $andPartOfOperator = true;
-      $currTerm['base_expr'] .= $token['base_expr'] . " ";
-      array_push($currTerm['sub_tree'], $token);
-      break;
-      case 'NOT':
-      case 'XOR':
-      case '||':
-      case 'OR':
-			    #create a sub-tree, since these operators cannot be commuted
-			    #first close the current term
-      $currTerm['base_expr'] = "( " . trim($currTerm['base_expr'], "()") . " )";
-
-			    #since the last term (currTerm) already has been added to the returnArray, remove it again
-      $tmpNode = array_pop($returnArray);
-      if (strcmp(str_replace(' ', '', $tmpNode['base_expr']), str_replace(' ', '', $currTerm['base_expr'])) != 0) {
-        array_push($returnArray, $tmpNode);
-      }
-
-			    #open a new term
-      $currSubTerm['expr_type'] = 'expression';
-      $currSubTerm['base_expr'] = '( ' . $currTerm['base_expr'] . ' ' . $token['base_expr'] . ' ';
-       $currSubTerm['sub_tree'] = array();
-       array_push($currSubTerm['sub_tree'], $currTerm);
-       array_push($currSubTerm['sub_tree'], $token);
-       $subTreesOpen = true;
-
-			    #open new term
-       $currTerm['expr_type'] = 'expression';
-       $currTerm['base_expr'] = '( ';
-         $currTerm['sub_tree'] = array();
-         break;
-         case 'AND':
-         case '&&':
-         if ($andPartOfOperator === true) {
-          $andPartOfOperator = false;
-          $currTerm['base_expr'] .= $token['base_expr'] . " ";
-          array_push($currTerm['sub_tree'], $token);
-          break;
-        } else if ($termOpen === false) {
-          array_push($returnArray, $token);
-          break;
-        } else if ($subTreesOpen === true) {
-				#close this term
-          $currTerm['base_expr'] .= " )";
-array_push($currTerm['sub_tree'], $token);
-$termOpen = false;
-$betweenTerm = false;
-
-				#close subtree
-array_push($currSubTerm['sub_tree'], $currTerm);
-$currSubTerm['base_expr'] .= $currTerm['base_expr'] . " )";
-array_push($returnArray, $currSubTerm);
-array_push($returnArray, $token);
-
-$subTreesOpen = false;
-break;
-} else {
-				#close this term
-  $currTerm['base_expr'] .= " )";
-$termOpen = false;
-$betweenTerm = false;
-array_push($returnArray, $currTerm);
-array_push($returnArray, $token);
-break;
-}
-default:
-if ($termOpen === false) {
-				#open a new term
-  $termOpen = true;
-  $currTerm['expr_type'] = 'expression';
-  $currTerm['base_expr'] = '( ';
-    $currTerm['sub_tree'] = array();
-  }
-
-  $numArithOperators++;
-
-  $currTerm['base_expr'] .= $token['base_expr'] . " ";
-  array_push($currTerm['sub_tree'], $token);
-  break;
-}
-}
-}
-}
-
-    #check if parenthesis are balanced
-if ($termOpen === true) {
-	if ($subTreesOpen === true) {
-	    #close this term
-   $currTerm['base_expr'] .= " )";
-	    //array_push($currTerm['sub_tree'], $token);
-$termOpen = false;
-
-	    #close subtree
-array_push($currSubTerm['sub_tree'], $currTerm);
-$currSubTerm['base_expr'] .= $currTerm['base_expr'] . " )";
-array_push($returnArray, $currSubTerm);
-
-$subTreesOpen = false;
-} else {
- $currTerm['base_expr'] .= " )";
-	    //array_push($currTerm['sub_tree'], $token);
-$termOpen = false;
-array_push($returnArray, $currTerm);
-}
-}
-
-$newTree = array_merge($newTree, $returnArray);
 }
 
 ?>
