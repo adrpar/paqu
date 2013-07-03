@@ -781,8 +781,9 @@ EOREGEX
 				$base_expr=join("", $tokens);
 				$alias = $base_expr;
 
-				if($stripped[0]['expr_type'] == 'function' ||
-				   $stripped[0]['expr_type'] == 'aggregate_function') {
+				if(!empty($stripped) &&
+					($stripped[0]['expr_type'] == 'function' ||
+				   		$stripped[0]['expr_type'] == 'aggregate_function')) {
 					$alias = str_replace(".", "__", $base_expr);
 		            $alias = str_replace("(", "_", $alias);
 		            $alias = str_replace(")", "_", $alias);

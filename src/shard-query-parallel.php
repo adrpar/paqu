@@ -370,10 +370,10 @@ class ShardQuery {
 		$parallel = false;
 		foreach($table['sub_tree']['FROM'] as $fromNode) {
 		    if($fromNode['table'] != 'DEPENDENT-SUBQUERY') {
-			$parallel = true;
+				$parallel = true;
 		    }
 		}
-		
+
 		$this->process_sql($table['sub_tree'], $recLevel++);
 		$this->parsed = $tmpTree;
 		$this->subqueries[$this->table_name] = $this->shard_sql;

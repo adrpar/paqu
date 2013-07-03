@@ -379,7 +379,9 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
 
             $sql = $parsed['base_expr'] . "(" . substr($sql, 0, -1) . ")";
 
-            $sql .= $this->processAlias($parsed['alias']);
+            if(array_key_exists('alias', $parsed)) {
+                $sql .= $this->processAlias($parsed['alias']);
+            }
 
             return $sql;
         }
