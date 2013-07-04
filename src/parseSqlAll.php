@@ -98,7 +98,72 @@ function processQueryWildcard($sql, $mysqlConn = false, $zendAdapter = false) {
     _parseSqlAll_WHERE($sqlTree->parsed, $mysqlConn, $zendAdapter);
     _parseSqlAll_SELECT($sqlTree->parsed, $mysqlConn, $zendAdapter);
 
+    //after the rewrite, go through the tree and find any name in WHERE, GROUP, ORDER
+    //that needs to be changed as well
+    _parseSqlAll_fixAliases($sqlTree->parsed);
+
     return $sqlTree;
+}
+
+function _parseSqlAll_fixAliases(&$sqlTree) {
+	//create list of all tables in FROM clause - link them to array with alias as key, 
+	//and node as value
+	$fromList = array();
+
+	if(!array_key_exists("FROM", $sqlTree)) {
+		return;
+	}
+
+	foreach($sqlTree['FROM'] as $node) {
+		if($node['expr_type'] == "subquery") {
+			_parseSqlAll_fixAliases($node['sub_tree']);
+		}
+
+		if($node['alias'] !== false) {
+			$fromList[$node['alias']['name']] = $node;
+		} else {
+			$fromList[$node['table']] = $node;
+		}
+	}
+
+	//go through WHERE is exists
+	foreach($sqlTree as $key => $sqlNode) {
+		if($key !== "WHERE" && $key !== "GROUP" && $key !== "ORDER")
+			continue;
+
+		if(array_key_exists("WHERE", $sqlTree)) {
+		    foreach($sqlTree['WHERE'] as &$node) {
+				if($node['expr_type'] == "subquery") {
+					_parseSqlAll_fixAliases($node['sub_tree']);
+				}
+
+				//only process colrefs
+				if($node['expr_type'] !== "colref") {
+					continue;
+				}
+
+				$tmp = _parseSqlAll_parseResourceName($node['base_expr']);
+
+				if(count($tmp) == 3) {
+					$table = $tmp[1];
+					$column = $tmp[2];
+				} else {
+					$table = false;
+					$column = $tmp[1];
+				}
+
+				//we only need to change this column if it was retrieved from a subquery
+				if($table !== false && $fromList[$table]['expr_type'] == "subquery") {
+					//look this column up in the sub select
+					foreach($fromList[$table]['sub_tree']['SELECT'] as $selNode) {
+	                    if($selNode['alias'] !== false && strpos($selNode['alias']['name'], $column)) {
+	                            $node['base_expr'] = "`" . $table . "`.`" . trim($selNode['alias']['name'], "`") . "`";
+	                    }
+					}
+				}
+		    }
+		}
+	}
 }
 
 /**
