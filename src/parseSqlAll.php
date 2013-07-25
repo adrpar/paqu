@@ -126,7 +126,7 @@ function _parseSqlAll_fixAliases(&$sqlTree) {
 		}
 	}
 
-	//go through WHERE is exists
+	//go through WHERE it exists
 	foreach($sqlTree as $key => $sqlNode) {
 		if($key !== "WHERE" && $key !== "GROUP" && $key !== "ORDER")
 			continue;
@@ -153,7 +153,8 @@ function _parseSqlAll_fixAliases(&$sqlTree) {
 				}
 
 				//we only need to change this column if it was retrieved from a subquery
-				if($table !== false && $fromList[$table]['expr_type'] == "subquery") {
+				if($table !== false && array_key_exists($table, $fromList) && 
+					$fromList[$table]['expr_type'] == "subquery") {
 					//look this column up in the sub select
 					foreach($fromList[$table]['sub_tree']['SELECT'] as $selNode) {
 	                    if($selNode['alias'] !== false && strpos($selNode['alias']['name'], $column)) {
@@ -257,20 +258,14 @@ function _parseSqlAll_SELECT(&$sqlTree, $mysqlConn = false, $zendAdapter = false
 			$table = array();
 			$alias = array();
 			if($tableFullName === false) {
-				//if this is no alias, we assume that the first table in FROM
-				//which is not a subquery resolves to this *
-
-				$aliasNames = true;
-				if(count($sqlTree['FROM']) === 1)
-					$aliasNames = false;
-
+				//add everything *ed from all tables to this query
 				foreach($sqlTree['FROM'] as $fromNode) {
 					if($fromNode['expr_type'] == "table") {
 						$table[] = $fromNode['table'];
-						if($aliasNames === false && $fromNode['alias'] === false) {
-							$alias[] = false;
+						if($fromNode['alias'] === false) {
+							$alias[] = $fromNode['table'];
 						} else {
-							$alias[] = trim($fromNode['table'], "`");
+							$alias[] = $fromNode['alias']['name'];
 						}
 					} else if ($fromNode['expr_type'] == "subquery") {
 						//handle subqueries...
@@ -300,7 +295,7 @@ function _parseSqlAll_SELECT(&$sqlTree, $mysqlConn = false, $zendAdapter = false
 						}			
 				    }
 				}
-				$alias[] = trim($tableFullName, "`");
+				$alias[] = $tableFullName;
 		    }
 		    
 		    if(empty($table))
@@ -309,11 +304,11 @@ function _parseSqlAll_SELECT(&$sqlTree, $mysqlConn = false, $zendAdapter = false
 		    //now that we know the table, we need to look up what is in there
 		    foreach(array_keys($table) as $key) {
 			    if($mysqlConn !== false) {
-				    _parseSqlAll_getColsMysqlii($sqlTree, $node, $mysqlConn, $table[$key], str_replace(".", "`.`", $alias[$key]));
+				    _parseSqlAll_getColsMysqlii($sqlTree, $node, $mysqlConn, $table[$key], $alias[$key]);
 			    }
 
 			    if($zendAdapter !== false) {
-				    _parseSqlAll_getColsZend($sqlTree, $node, $zendAdapter, $table[$key], str_replace(".", "`.`", $alias[$key]));
+				    _parseSqlAll_getColsZend($sqlTree, $node, $zendAdapter, $table[$key], $alias[$key]);
 			    }
 		    }
 		} else {
@@ -401,7 +396,7 @@ function _parseSqlAll_getColsMysqlii(&$sqlTree, &$node, $mysqlConn, $table, $ali
 		    if($alias === false) {
 				$node['base_expr'] = $row[0];
 		    } else {
-				$node['base_expr'] = "`" . $alias . "`." . $row[0];
+				$node['base_expr'] = $alias . "." . $row[0];
 				$node['alias'] = array("as" => true,
 								   "name" => "`" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`",
 								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`");
@@ -414,7 +409,7 @@ function _parseSqlAll_getColsMysqlii(&$sqlTree, &$node, $mysqlConn, $table, $ali
 		    if($alias === false) {
 				$newNode['base_expr'] = $row[0];
 		    } else {
-				$newNode['base_expr'] = "`" . $alias . "`." . $row[0];
+				$newNode['base_expr'] = $alias . "." . $row[0];
 				$newNode['alias'] = array("as" => true,
 								   "name" => "`" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`",
 								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`");
@@ -438,7 +433,7 @@ function _parseSqlAll_getColsZend(&$sqlTree, &$node, $zendAdapter, $table, $alia
 		    if($alias === false || empty($alias)) {
 				$node['base_expr'] = $row['Field'];
 		    } else {
-				$node['base_expr'] = "`" . $alias . "`." . $row['Field'];
+				$node['base_expr'] = $alias . "." . $row['Field'];
 				$node['alias'] = array("as" => true,
 								   "name" => "`" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`",
 								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`");
@@ -451,7 +446,7 @@ function _parseSqlAll_getColsZend(&$sqlTree, &$node, $zendAdapter, $table, $alia
 		    if($alias === false || empty($alias)) {
 				$newNode['base_expr'] = $row['Field'];
 		    } else {
-				$newNode['base_expr'] = "`" . $alias . "`." . $row['Field'];
+				$newNode['base_expr'] = $alias . "." . $row['Field'];
 				$newNode['alias'] = array("as" => true,
 								   "name" => "`" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`",
 								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`");

@@ -183,6 +183,8 @@ pthread_handler_t paqu_daemon(void *p) {
                         }
                     }
                 }
+            } else {
+                connectToHead(&mysql);
             }
 
 #ifdef __JOBMON_DEBUG__
