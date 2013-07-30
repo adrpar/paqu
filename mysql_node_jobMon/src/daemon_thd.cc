@@ -32,6 +32,10 @@
 #pragma implementation
 #endif
 
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+extern uint kill_one_thread(THD *thd, ulong id, killed_state kill_signal);
+#endif
+
 int init_thread(THD ** thd, const char * threadInfo) {
     THD *newThd;
     my_thread_init();
@@ -70,7 +74,11 @@ int init_thread(THD ** thd, const char * threadInfo) {
 
 
     (*thd)->real_id = pthread_self();
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+    (*thd)->killed = NOT_KILLED;
+#else
     (*thd)->killed = THD::NOT_KILLED;
+#endif
 #if MYSQL_VERSION_ID >= 50505
     mysql_mutex_lock(&LOCK_thread_count);
 #else
@@ -140,7 +148,7 @@ int deinit_thread(THD ** thd) {
 
 void sql_kill(THD *thd, ulong id, bool only_kill_query) {
     uint error;
-    if (!(error = kill_one_thread(thd, id, only_kill_query))) {
+    if (!(error = kill_one_thread(thd, id, (killed_state)only_kill_query))) {
 	if (!thd->killed)
 	    my_ok(thd);
     } else

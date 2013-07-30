@@ -3,13 +3,13 @@ project (paqu_jobMon)
 ###########################################################
 #### uncomment this, if you want to specify own mysql path
 ###########################################################
-set(MYSQL_PATH "/usr/local/mysql5.6")
+set(MYSQL_PATH "/usr/local/mariadb")
 
 ###########################################################
 #### path to the mysql 5.5 sources - download them from
 #### www.mysql.com if you don't have them 
 ###########################################################
-set(MYSQL_SOURCES_PATH "/home/adrpar/Downloads/mysql-5.6.10")
+set(MYSQL_SOURCES_PATH "/Users/adrian/Downloads/mariadb-5.5.32")
 
 if(MYSQL_PATH)
     set(MYSQL_CONFIG "${MYSQL_PATH}/bin/mysql_config")
@@ -37,6 +37,7 @@ STRING(REGEX MATCHALL "-D([^ ]*)" defineList "${mysqlConfig}")
 message("Found the following defines in your mysqld configuration: ${defineList}")
 
 add_definitions(${defineList})
+add_definitions(-DDISABLE_DTRACE)
 
 #add_definitions(-D__JOBMON_DEBUG__)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MYSQL_INCLUDE_DIR} -fPIC -fno-exceptions -fno-rtti")

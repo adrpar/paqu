@@ -271,7 +271,7 @@ int parseConnectStr(char *connectStr, int len) {
 
     //strip any possible table names
     char *tmpTblName;
-    if (tmpTblName = strchr(strStart, '/'))
+    if ( (tmpTblName = strchr(strStart, '/')) )
         strStart[tmpTblName - strStart] = '\0';
     tmpTblName++;
 
@@ -294,7 +294,7 @@ int parsePaQuQID(char *query) {
     if (query == NULL)
         return -1;
 
-    if (QIDstart = strstr(query, "/* PaQu: QID ")) {
+    if ( (QIDstart = strstr(query, "/* PaQu: QID ")) ) {
         QIDstart += 13;
         QIDend = strstr(QIDstart, "*/");
 
@@ -468,7 +468,11 @@ void getLocalProcesslist(thd_list **toThisList) {
         else
             currThdInfo->db = NULL;
 
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+        currThdInfo->killed = (my_bool) (currThd->killed == KILL_CONNECTION ? TRUE : FALSE);
+#else
         currThdInfo->killed = (my_bool) (currThd->killed == THD::KILL_CONNECTION ? TRUE : FALSE);
+#endif
 
         char *query = NULL;
         if (currThd->query()) {
@@ -514,7 +518,11 @@ static int paqu_plugin_deinit(void *p) {
     char time_str[20];
 
     if (thd != NULL) {
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+        thd->killed = KILL_CONNECTION;
+#else
         thd->killed = THD::KILL_CONNECTION;
+#endif
     }
 #if MYSQL_VERSION_ID >= 50505
     mysql_cond_signal(&paquKillCond);

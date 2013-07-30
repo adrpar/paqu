@@ -3,13 +3,13 @@ project (paqu_UDF)
 ###########################################################
 #### uncomment this, if you want to specify own mysql path
 ###########################################################
-set(MYSQL_PATH "/usr/local/mysql")
+set(MYSQL_PATH "/usr/local/mariadb")
 
 ###########################################################
 #### path to the mysql 5.5 sources - download them from
 #### www.mysql.com if you don't have them 
 ###########################################################
-set(MYSQL_SOURCES_PATH "/home/adrpar/Downloads/mysql-5.5.14-spider-2.28-vp-0.17-hs-1.1-q4m-0.95")
+set(MYSQL_SOURCES_PATH "/Users/adrian/Downloads/mariadb-5.5.32")
 
 if(MYSQL_PATH)
     set(MYSQL_CONFIG "${MYSQL_PATH}/bin/mysql_config")
@@ -30,7 +30,7 @@ SET(BUILD_SHARED_LIBS ON)
 
 add_definitions(-DMYSQL_DYNAMIC_PLUGIN)
 add_definitions(-DDBUG_OFF)
-add_definitions(-std=c99)
+add_definitions(-DDISABLE_DTRACE)
 #add_definitions(-D__QQUEUE_DEBUG__)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MYSQL_INCLUDE_DIR} -fPIC -fno-exceptions -fno-rtti")
 
