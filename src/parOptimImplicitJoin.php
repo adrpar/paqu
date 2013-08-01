@@ -1191,7 +1191,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 
 	    #check if this column already exists in the select tree
     $findNode = false;
-    foreach ($toThisNode['SELECT'] as &$selNode) {
+    foreach ($toThisNode['SELECT'] as $selNode) {
       if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ')) {
         $findNode = $selNode;
 		    #$selNode['order_clause'] = $node;
