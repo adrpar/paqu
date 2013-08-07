@@ -71,14 +71,20 @@ class ParallelQuery {
 
     private $dataDB = false;                            //!< The database where most of the query is done for finding the spider nodes
 
+    private $headNodeTables = array();                  //!< List of tables that are completely located on the head node and are not sharded
+
     function __construct() {
 	$this->queryInput = "";
     }
     
     function __destruct() {
-	if($this->connection !== false) {
-	    $this->closeDBConnect();
-	}
+    	if($this->connection !== false) {
+    	    $this->closeDBConnect();
+    	}
+    }
+
+    function setHeadNodeTables($newList) {
+        $this->headNodeTables = $newList;
     }
 
     function setDB($value) {
@@ -239,7 +245,7 @@ class ParallelQuery {
     	    throw new Exception("ParallelQuery: Result table already exists");
     	}
     	
-    	$shard_query = PHPSQLprepareQuery($this->queryInput);
+    	$shard_query = PHPSQLprepareQuery($this->queryInput, $this->headNodeTables);
 
     	try {
     	    $this->shardedQueries = PHPSQLqueryPlanWriter($shard_query, $resultTable, $this->addRowNumbersToFinalTable);

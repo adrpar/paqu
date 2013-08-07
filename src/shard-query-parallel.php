@@ -63,6 +63,7 @@ class ShardQuery {
     var $coord_odku = array();
     var $subqueries = array();
     var $outputString = "";
+    var $headNodeTables = array();
 
     #FIXME: Make this support SUM(X) + SUM(Y).
     #To do this create process_select_expr and then iterate (possively recursively) 
@@ -358,72 +359,81 @@ class ShardQuery {
 
     function process_from($tables, $recLevel) {
 
-	/* DEPENDENT-SUBQUERY handling
-	 */
+		/* DEPENDENT-SUBQUERY handling
+		 */
 
-	foreach ($tables as $key => $table) {
-	    if ($table['table'] == 'DEPENDENT-SUBQUERY') {
-		$tmpTree = $this->parsed;
-		
-		#determine if this is a serial or parallel query:
-		#parallel only if there are other tables than temporary (i.e. dependent) ones involved
-		$parallel = false;
-		foreach($table['sub_tree']['FROM'] as $fromNode) {
-		    if($fromNode['table'] != 'DEPENDENT-SUBQUERY') {
-				$parallel = true;
+		foreach ($tables as $key => $table) {
+		    if ($table['table'] == 'DEPENDENT-SUBQUERY') {
+				$tmpTree = $this->parsed;
+				
+				#determine if this is a serial or parallel query:
+				#parallel only if there are other tables than temporary (i.e. dependent) ones involved
+				$parallel = false;
+				foreach($table['sub_tree']['FROM'] as $fromNode) {
+				    if($fromNode['table'] != 'DEPENDENT-SUBQUERY') {
+						$parallel = true;
+
+						//check if this table is only available on the head node
+						//if yes, donot execute the query in parallel
+						foreach($this->headNodeTables as $headNodeTable) {
+							if(strpos($headNodeTable, $fromNode['table']) !== false ||
+									strpos($fromNode['table'], $headNodeTable) !== false) {
+								$parallel = false;
+								break;
+							}
+						}
+				    }
+				}
+
+				$this->process_sql($table['sub_tree'], $recLevel++);
+				$this->parsed = $tmpTree;
+				$this->subqueries[$this->table_name] = $this->shard_sql;
+				$this->subqueries[$this->table_name]['parallel'] = $parallel;
+
+				$sql = '( ' . $this->coord_sql . ')';
+				$tables[$key]['table'] = $sql;
 		    }
 		}
 
-		$this->process_sql($table['sub_tree'], $recLevel++);
-		$this->parsed = $tmpTree;
-		$this->subqueries[$this->table_name] = $this->shard_sql;
-		$this->subqueries[$this->table_name]['parallel'] = $parallel;
+		#escape the table name if it is unescaped
+		if ($tables[0]['alias'] != "" && $tables[0]['alias'][0] != '`' && $tables[0]['alias'][0] != '(')
+		    $tables[0]['alias'] = '`' . $tables[0]['alias'] . '`';
 
-		$sql = '( ' . $this->coord_sql . ')';
-		$tables[$key]['table'] = $sql;
-	    }
-	}
-
-	#escape the table name if it is unescaped
-	if ($tables[0]['alias'] != "" && $tables[0]['alias'][0] != '`' && $tables[0]['alias'][0] != '(')
-	    $tables[0]['alias'] = '`' . $tables[0]['alias'] . '`';
-
-	#the first table is always prefixed by FROM
-	$sql = "FROM " . $tables[0]['table'];
-	if($tables[0]['alias'] != "") {
-	    $sql .= ' AS ' . $tables[0]['alias'];
-	}
-	
-	$cnt = count($tables);
-
-	#now create the rest of the FROM clause
-	for ($i = 1; $i < $cnt; ++$i) {
-
-	    if ($tables[$i]['ref_type'] == 'USING') {
-		$tables[$i]['ref_clause'] = "(" . trim($tables[$i]['ref_clause']) . ")";
-	    } elseif ($tables[$i]['ref_type'] == 'ON') {
-		$tables[$i]['ref_clause'] = ' (' . $tables[$i]['ref_clause'] . ") ";
-	    }
-
-	    if ($sql)
-		$sql .= " ";
-	    if ($tables[$i]['alias'] != "" && $tables[$i]['alias'][0] != '`' && $tables[$i]['alias'][0] != '(') {
-		$pos = strpos($tables[$i]['alias'], '.');
-		if ($pos !== false) {
-		    $info = explode('.', $tables[$i]['alias']);
-		    $table = $info[1];
-		    $tables[$i]['alias'] = '`' . $table . '`';
-		} else {
-		    $tables[$i]['alias'] = '`' . $tables[$i]['alias'] . '`';
+		#the first table is always prefixed by FROM
+		$sql = "FROM " . $tables[0]['table'];
+		if($tables[0]['alias'] != "") {
+		    $sql .= ' AS ' . $tables[0]['alias'];
 		}
-	    }
-	    $sql .= $tables[$i]['join_type'] . ' ' . $tables[$i]['table'];
-	    if($tables[$i]['alias'] != "")
-		$sql .= ' AS ' . $tables[$i]['alias'];
-		$sql .= ' ' . $tables[$i]['ref_type'] . $tables[$i]['ref_clause'];
-	}
+		
+		$cnt = count($tables);
 
-	return $sql;
+		#now create the rest of the FROM clause
+		for ($i = 1; $i < $cnt; ++$i) {
+		    if ($tables[$i]['ref_type'] == 'USING') {
+				$tables[$i]['ref_clause'] = "(" . trim($tables[$i]['ref_clause']) . ")";
+		    } elseif ($tables[$i]['ref_type'] == 'ON') {
+				$tables[$i]['ref_clause'] = ' (' . $tables[$i]['ref_clause'] . ") ";
+		    }
+
+		    if ($sql)
+				$sql .= " ";
+		    if ($tables[$i]['alias'] != "" && $tables[$i]['alias'][0] != '`' && $tables[$i]['alias'][0] != '(') {
+				$pos = strpos($tables[$i]['alias'], '.');
+				if ($pos !== false) {
+				    $info = explode('.', $tables[$i]['alias']);
+				    $table = $info[1];
+				    $tables[$i]['alias'] = '`' . $table . '`';
+				} else {
+				    $tables[$i]['alias'] = '`' . $tables[$i]['alias'] . '`';
+				}
+		    }
+		    $sql .= $tables[$i]['join_type'] . ' ' . $tables[$i]['table'];
+		    if($tables[$i]['alias'] != "")
+				$sql .= ' AS ' . $tables[$i]['alias'];
+			$sql .= ' ' . $tables[$i]['ref_type'] . $tables[$i]['ref_clause'];
+		}
+
+		return $sql;
     }
 
     function set_partition_info($column, $callback) {
@@ -688,7 +698,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 	    #$this->parsed = $this->client->do('sql_parse',$sql);
 	    $parser = new PHPSQLParserOld($sql);
 
-	    $this->parsed = PHPSQLbuildShardQuery($parser->parsed);
+	    $this->parsed = PHPSQLbuildShardQuery($parser->parsed, $this->headNodeTables);
 	    $this->parsedCopy = $this->parsed;
 	} else {
 	    $this->parsed = $sql;

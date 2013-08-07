@@ -47,6 +47,7 @@ include_once 'shard-query-parallel.php';
 /**
  * @brief Generates the parallel query plan from a given SQL query
  * @param query SQL query that will be parallelised
+ * @param headNodeTables list of tables that are completely located on the head node and are not sharded
  * @return the raw sharded queries to be run on the coordination and shard nodes
  * 
  * These function will create a parallel query plan from an input SQL statement
@@ -55,13 +56,14 @@ include_once 'shard-query-parallel.php';
  * function is properly transfered into sharded versions. This function will eventually
  * produce a query plan that can be further processed by the query plan to SQL parser.
  */
-function PHPSQLprepareQuery($query) {
+function PHPSQLprepareQuery($query, $headNodeTables = array()) {
     $shard_query = new ShardQuery();
     $shard_query->verbose = false;
+    $shard_query->headNodeTables = $headNodeTables;
     
     $shard_query->process_sql($query);
 
-    if(!empty($shard_query->errors)) {#
+    if(!empty($shard_query->errors)) {
     	echo "An Error occured:\n\n";
     	foreach($shard_query->errors as $key => $error) {
     	    echo $key . ": " . $error . "\n";
@@ -75,7 +77,17 @@ function PHPSQLprepareQuery($query) {
     $parallel = false;
     foreach($shard_query->parsedCopy['FROM'] as $fromNode) {
     	if($fromNode['table'] != 'DEPENDENT-SUBQUERY') {
-    	    $parallel = true;
+  	    $parallel = true;
+
+        //check if this table is only available on the head node
+        //if yes, donot execute the query in parallel
+        foreach($headNodeTables as $headNodeTable) {
+          if(strpos($headNodeTable, $fromNode['table']) !== false ||
+              strpos($fromNode['table'], $headNodeTable) !== false) {
+            $parallel = false;
+            break;
+          }
+        }
     	}
     }
 
@@ -101,7 +113,7 @@ function PHPSQLprepareQuery($query) {
 function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false, $aggregateDist = true) {
     $commandArray = array();
     $dropTables = array();
-    
+
     foreach($shard_query->subqueries as $key => $query) {
     	if($query['parallel'] === true) {
   	    $paraQuery = "CALL paquExec(\"" . str_replace("\n", " ", $query[0]) . "\", \"" . $key . "\")";
@@ -127,7 +139,7 @@ function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false
     #gather the result into table
     array_push($dropTables, PHPSQLaggregateResult($shard_query, $resultTable, $addRowNumber, $aggregateDist));
     array_push($dropTables, $tmpQuery);
-    
+
     return array_merge($commandArray, $dropTables);
 }
 
