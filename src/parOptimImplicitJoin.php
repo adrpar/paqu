@@ -1433,6 +1433,7 @@ function PHPSQLaddOuterQueryFrom(&$sqlTree, &$table, &$toThisNode, $tableList, $
  */
 function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnArray, &$tableList, $recLevel, $startBranch = true) {
   $countDiffTables = 0;
+  $tblAlias = str_replace($tblAlias, "`", "");
 
   $workload = array();
   if (array_key_exists('SELECT', $sqlSelect)) {
@@ -1453,13 +1454,20 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
       if (count($tmp) == 1) {
         $currCol = $tmp[0];
         $currTable = false;
-      } else {
+        $currDB = false;
+      } else if (count($tmp) == 2) {
         $currTable = trim($tmp[0], "`");
         $currCol = $tmp[1];
+        $currDB = false;
+      } else {
+        $currDB = trim($tmp[0], "`");
+        $currTable = trim($tmp[1], "`");
+        $currCol = $tmp[2];
       }
 
 //	    if ($currTable == $tblAlias || ($tblAlias == $tblDb . "." . $tblName && $currTable === false) || $currTable == $tblName) {
-      if ($currTable == $tblAlias || ($currTable === false) || $currTable == $tblName) {
+      if ($currTable == $tblAlias || ($currTable === false) || $currTable == $tblName || 
+             $tblAlias = $currDB . "." . $currTable) {
         if ($startBranch === true) {
           array_push($returnArray, $node);
         }

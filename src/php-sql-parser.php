@@ -593,7 +593,7 @@ EOREGEX
 			if(!empty($out['INSERT']))  $out = $this->process_insert($out);
 			if(!empty($out['REPLACE']))  $out = $this->process_insert($out,'REPLACE');
 			if(!empty($out['DELETE']))  $out = $this->process_delete($out);
-		
+
 			return $out;
 		
 		}
@@ -711,7 +711,7 @@ EOREGEX
 			$aliased = false;
 			for($i=0;$i<$token_count;++$i) {
 			    if(strpos($tokens[$i], "`") !== false) {
-				$aliased = true;
+					$aliased = true;
 			    }
 			    
 			    
@@ -734,27 +734,27 @@ EOREGEX
 					continue;
 				}
 				$base_expr .= $tokens[$i];
-				
+
 			    if($aliased === true && strpos($tokens[$i], ".") !== false && $i != 0) {
-				$aliased = false;
-				$tokens[$i-1] .= $tokens[$i];
-				unset($tokens[$i]);
+					$aliased = false;
+					$tokens[$i-1] .= $tokens[$i];
+					unset($tokens[$i]);
 			    }
 			}
-			
+
 			$stripped = $this->process_expr_list($stripped);
 			
 			$aliased = false;
 			for($i=0;$i<count($stripped);++$i) {
 			    if(strpos($stripped[$i]['base_expr'], "`") !== false) {
-				$aliased = true;
-				continue;
+					$aliased = true;
+					continue;
 			    }
 			    
 			    if($aliased === true && strpos($stripped[$i]['base_expr'], ".") !== false) {
-				$aliased = false;
-				$stripped[$i-1]['base_expr'] .= $stripped[$i]['base_expr'];
-				unset($stripped[$i]);
+					$aliased = false;
+					$stripped[$i-1]['base_expr'] .= $stripped[$i]['base_expr'];
+					unset($stripped[$i]);
 			    }
 			}
 			

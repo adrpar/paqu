@@ -123,8 +123,16 @@ function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false
   	    array_push($commandArray, $paraQuery);
   	    array_push($dropTables, $dropTableHead);
     	} else {
-  	    $hostTableCreateQuery = "CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard." . $key . " ENGINE=MyISAM " . $query[0] . " LIMIT 0";
-  	    $shardActualQuery = "USE spider_tmp_shard; INSERT INTO spider_tmp_shard." . $key . " ". $query[0] ;
+        #remove any LIMIT clause, that might interfere
+        #if this limit is part of a subquery, there must be a closing parenthesis at pos > limit_pos
+        $tmpPos = strrpos($query[0], "LIMIT");
+        if($tmpPos === false) {
+            $tmpPos = strlen($query[0]);
+        }
+        $limitFreeQuery = substr($query[0], 0, $tmpPos);
+
+  	    $hostTableCreateQuery = "CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard." . $key . " ENGINE=MyISAM " . $limitFreeQuery . " LIMIT 0";
+  	    $shardActualQuery = "USE spider_tmp_shard; INSERT INTO spider_tmp_shard." . $key . " ". $query[0]  . ";";
         $shardActualQuery .= "\nCALL paquLinkTmp(\"" . $key . "\")";
   	    //$dropTableHead = "DROP TABLE spider_tmp_shard." . $key ;
         $dropTableHead = "CALL paquDropTmp(\"" . $key . "\")";
