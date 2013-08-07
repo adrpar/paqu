@@ -43,13 +43,14 @@ $shard_query = "select Mvir FROM MDR1.BDMV WHERE snapnum = 85 and (x between -20
 
 	$paraQuery = new ParallelQuery();
 	try {
-		$paraQuery->setCheckOnDB(false);
-		$paraQuery->setHeadNodeTables(array("bar"));
+		/*$paraQuery->setCheckOnDB(false);
+		$paraQuery->setHeadNodeTables(array("bar"));*/
 		$paraQuery->setSQL($shard_query);
 		$paraQuery->generateParallelQueryPlan($resTable);
 		$paraQuery->printParallelQueryPlanOptimisationsToFile($fh);
 		$paraQuery->printParallelQueryPlanToFile($fh);
 		$paraQuery->translateQueryPlan();
+		var_dump($paraQuery->getActualQueries()); die(0);
 		$time = $paraQuery->executeQuery();
 	} catch (Exception $err) {
 		echo "An Error occured:\n\n";
