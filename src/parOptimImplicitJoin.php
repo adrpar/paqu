@@ -1635,8 +1635,7 @@ function PHPSQLdetStartTable($tableList, $headNodeTables = array()) {
      //this also allows definition of complete database and will consider this if database is given in table
      //name)
      foreach($headNodeTables as $headNodeTable) {
-      if(strpos($headNodeTable, $table['name']) !== false ||
-         strpos($table['name'], $headNodeTable) !== false) {
+      if(strpos($table['name'], $headNodeTable) !== false) {
         $condCount[$key] = 99999999 + $table['cond_count'];
         break;
       }
