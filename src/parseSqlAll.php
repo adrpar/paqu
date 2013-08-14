@@ -132,39 +132,47 @@ function _parseSqlAll_fixAliases(&$sqlTree) {
 			continue;
 
 		if(array_key_exists("WHERE", $sqlTree)) {
-		    foreach($sqlTree['WHERE'] as &$node) {
-				if($node['expr_type'] == "subquery") {
-					_parseSqlAll_fixAliases($node['sub_tree']);
-				}
-
-				//only process colrefs
-				if($node['expr_type'] !== "colref") {
-					continue;
-				}
-
-				$tmp = _parseSqlAll_parseResourceName($node['base_expr']);
-
-				if(count($tmp) == 3) {
-					$table = $tmp[1];
-					$column = $tmp[2];
-				} else {
-					$table = false;
-					$column = $tmp[1];
-				}
-
-				//we only need to change this column if it was retrieved from a subquery
-				if($table !== false && array_key_exists($table, $fromList) && 
-					$fromList[$table]['expr_type'] == "subquery") {
-					//look this column up in the sub select
-					foreach($fromList[$table]['sub_tree']['SELECT'] as $selNode) {
-	                    if($selNode['alias'] !== false && strpos($selNode['alias']['name'], $column)) {
-	                            $node['base_expr'] = "`" . $table . "`.`" . trim($selNode['alias']['name'], "`") . "`";
-	                    }
-					}
-				}
-		    }
+			_parseSqlAll_fixAliasesInNode($sqlTree['WHERE'], $fromList);
+		} else if (array_key_exists("GROUP", $sqlTree)) {
+			_parseSqlAll_fixAliasesInNode($sqlTree['GROUP'], $fromList);
+		} else if (array_key_exists("ORDER", $sqlTree)) {
+			_parseSqlAll_fixAliasesInNode($sqlTree['ORDER'], $fromList);
 		}
 	}
+}
+
+function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList) {
+    foreach($sqlTree as &$node) {
+		if($node['expr_type'] == "subquery") {
+			_parseSqlAll_fixAliases($node['sub_tree']);
+		}
+
+		//only process colrefs
+		if($node['expr_type'] !== "colref") {
+			continue;
+		}
+
+		$tmp = _parseSqlAll_parseResourceName($node['base_expr']);
+
+		if(count($tmp) == 3) {
+			$table = $tmp[1];
+			$column = $tmp[2];
+		} else {
+			$table = false;
+			$column = $tmp[1];
+		}
+
+		//we only need to change this column if it was retrieved from a subquery
+		if($table !== false && array_key_exists($table, $fromList) && 
+			$fromList[$table]['expr_type'] == "subquery") {
+			//look this column up in the sub select
+			foreach($fromList[$table]['sub_tree']['SELECT'] as $selNode) {
+                if($selNode['alias'] !== false && strpos($selNode['alias']['name'], $column)) {
+                        $node['base_expr'] = "`" . $table . "`.`" . trim($selNode['alias']['name'], "`") . "`";
+                }
+			}
+		}
+    }	
 }
 
 /**
