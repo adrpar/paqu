@@ -133,22 +133,27 @@ function _parseSqlAll_fixAliases(&$sqlTree) {
 
 		if(array_key_exists("WHERE", $sqlTree)) {
 			_parseSqlAll_fixAliasesInNode($sqlTree['WHERE'], $fromList);
-		} else if (array_key_exists("GROUP", $sqlTree)) {
-			_parseSqlAll_fixAliasesInNode($sqlTree['GROUP'], $fromList);
-		} else if (array_key_exists("ORDER", $sqlTree)) {
-			_parseSqlAll_fixAliasesInNode($sqlTree['ORDER'], $fromList);
+		} 
+
+		if (array_key_exists("GROUP", $sqlTree)) {
+			_parseSqlAll_fixAliasesInNode($sqlTree['GROUP'], $fromList, $sqlTree['SELECT']);
+		} 
+
+		if (array_key_exists("ORDER", $sqlTree)) {
+			_parseSqlAll_fixAliasesInNode($sqlTree['ORDER'], $fromList, $sqlTree['SELECT']);
 		}
 	}
 }
 
-function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList) {
+function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList, &$selectTreeNode = FALSE) {
     foreach($sqlTree as &$node) {
-		if($node['expr_type'] == "subquery") {
+		if(array_key_exists("expr_type", $node) && $node['expr_type'] == "subquery") {
 			_parseSqlAll_fixAliases($node['sub_tree']);
 		}
 
 		//only process colrefs
-		if($node['expr_type'] !== "colref") {
+		if((array_key_exists("expr_type", $node) && $node['expr_type'] !== "colref") || 
+			(array_key_exists("type", $node) && $node['type'] !== "expression")) {
 			continue;
 		}
 
@@ -170,6 +175,23 @@ function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList) {
                 if($selNode['alias'] !== false && strpos($selNode['alias']['name'], $column)) {
                         $node['base_expr'] = "`" . $table . "`.`" . trim($selNode['alias']['name'], "`") . "`";
                 }
+			}
+		} else if ($selectTreeNode !== FALSE) {
+			//go through the list of columns in the select tree part, and find the corresponding alias
+			//we are doing this the cheep way:
+			//take the column name in where/order/group and get rid of all ` and replace . with __
+			//this way we should end up with a name that should be contained in the SELECT column list
+			$currAlias = str_replace(".", "__", str_replace("`", "", $node['base_expr']));
+			$strLenCurrAlias = strlen($currAlias);
+
+			foreach($selectTreeNode as $selNode) {
+				$nodeAlias = trim($selNode['alias']['name'], "`");
+
+				$aliasStrPos = strpos($nodeAlias, $currAlias);
+
+				if($aliasStrPos !== FALSE && strlen($nodeAlias) == $aliasStrPos + $strLenCurrAlias) {
+					$node['base_expr'] = $selNode['alias']['name'];
+				}
 			}
 		}
     }	

@@ -1195,7 +1195,8 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 	    #check if this column already exists in the select tree
     $findNode = false;
     foreach ($toThisNode['SELECT'] as $selNode) {
-      if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ')) {
+      if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ') ||
+          trim($selNode['alias']) == trim($node['base_expr'])) {
         $findNode = $selNode;
 		    #$selNode['order_clause'] = $node;
         break;
@@ -1283,7 +1284,8 @@ function PHPSQLaddOuterQueryGroup(&$sqlTree, &$table, &$toThisNode, &$tableList,
 	    #check if this column already exists in the select tree
      $findNode = false;
      foreach ($toThisNode['SELECT'] as &$selNode) {
-      if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ')) {
+      if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ') ||
+          trim($selNode['alias']) == trim($node['base_expr'])) {
         $findNode = $selNode;
 		    #$selNode['order_clause'] = $node;
         break;
