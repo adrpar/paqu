@@ -389,6 +389,7 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
   PHPSQLaddOuterQueryOrder($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
   PHPSQLaddOuterQueryWhere($sqlTree, $table, $currOuterQuery, $tableList, $recLevel, $currInnerNode);
+var_dump($currOuterQuery); 
   PHPSQLaddOuterQueryHaving($sqlTree, $table, $currOuterQuery);
 
   PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery);
@@ -419,7 +420,6 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
   PHPSQLresortCondTableList($tableList, $dependantWheres, $recLevel);
 
   #link to the tree
-
   if ($currInnerNode !== false) {
     linkInnerQueryToOuter($currOuterQuery, $currInnerNode, $tableList, $recLevel);
   }
@@ -997,87 +997,87 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 
   $listOfCols = array();
   if ($toThisNode !== false) {
-   foreach ($toThisNode['sub_tree']['SELECT'] as $selNode) {
-     array_push($listOfCols, $selNode);
-   }
- }
-
-    #rewrite node to properly alias involved columns
- if ($node['sub_tree'] !== false && $node['expr_type'] != "subquery") {
-   foreach ($node['sub_tree'] as &$subnode) {
-     if ($subnode['sub_tree'] !== false) {
-      PHPSQLrewriteAliasWhere($subnode, $tableList, $recLevel, $toThisNode);
+    foreach ($toThisNode['sub_tree']['SELECT'] as $selNode) {
+      array_push($listOfCols, $selNode);
     }
+  }
 
-    if ($subnode['expr_type'] == 'colref') {
-      $tmp = explode('.', $subnode['base_expr']);
-      if (count($tmp) < 1) {
-        $currTable = false;
-      } else {
-        $currTable = $tmp[0];
+  #rewrite node to properly alias involved columns
+  if ($node['sub_tree'] !== false && $node['expr_type'] != "subquery") {
+    foreach ($node['sub_tree'] as &$subnode) {
+      if ($subnode['sub_tree'] !== false) {
+        PHPSQLrewriteAliasWhere($subnode, $tableList, $recLevel, $toThisNode);
       }
 
-      if ($currTable !== false) {
-		    #search for the table in the tablelist
-        foreach ($tableList as $tblKey => $currTbl) {
-         if ($currTbl['alias'] == $currTable) {
-           break;
-         }
-       }
+      if ($subnode['expr_type'] == 'colref') {
+        $tmp = explode('.', $subnode['base_expr']);
+        if (count($tmp) < 1) {
+          $currTable = false;
+        } else {
+          $currTable = $tmp[0];
+        }
 
-       if ($tblKey > $recLevel) {
-			#rewrite name of where_node to properly alias it
-			#rewrite name to alias name if needed
-         foreach ($listOfCols as $selNode) {
-           if (trim($selNode['base_expr'], ' ') == $subnode['base_expr']) {
-            $tmp = explode(".", trim($selNode['alias'], '`'));
-            if (count($tmp) > 1) {
-				    #search for proper name in the subquery tree
-              foreach ($toThisNode['sub_tree']['FROM'] as $subTreeNode) {
-               if ($subTreeNode['alias'] == $currTable) {
-					    #now that the subtree is found, loop through the selects and find the 
-					    #node we are looking for
-					    #is this the lowest node? then there is no sub_tree to be found, handle things differntly
-                 if ($subTreeNode['sub_tree'] !== false) {
-                  $parseThisNode = $subTreeNode['sub_tree']['SELECT'];
-                } else {
-                  $parseThisNode = $toThisNode['sub_tree']['SELECT'];
-                }
-
-                foreach ($parseThisNode as $selectNodes) {
-                  $selTmp = explode(".", $selectNodes['base_expr']);
-                  if (count($selTmp) > 1) {
-                    $selColName = $selTmp[1];
-                  } else {
-                    $selColName = $selTmp[0];
-                  }
-
-                  if ($selColName == $tmp[1]) {
-                    $tmp[0] = $selectNodes['alias'];
-                    break;
-                  }
-                }
-                break;
-              }
+        if ($currTable !== false) {
+		      #search for the table in the tablelist
+          foreach ($tableList as $tblKey => $currTbl) {
+            if ($currTbl['alias'] == $currTable) {
+              break;
             }
           }
 
-          $subnode['base_expr'] = trim(implode(".", $tmp), "`");
+          if ($tblKey > $recLevel) {
+      			#rewrite name of where_node to properly alias it
+      			#rewrite name to alias name if needed
+            foreach ($listOfCols as $selNode) {
+              if (trim($selNode['base_expr'], ' ') == $subnode['base_expr']) {
+                $tmp = explode(".", trim($selNode['alias'], '`'));
+                if (count($tmp) > 1) {
+  				        #search for proper name in the subquery tree
+                  foreach ($toThisNode['sub_tree']['FROM'] as $subTreeNode) {
+                    if ($subTreeNode['alias'] == $currTable) {
+                      #now that the subtree is found, loop through the selects and find the 
+                      #node we are looking for
+                      #is this the lowest node? then there is no sub_tree to be found, handle things differntly
+                      if ($subTreeNode['sub_tree'] !== false) {
+                        $parseThisNode = $subTreeNode['sub_tree']['SELECT'];
+                      } else {
+                        $parseThisNode = $toThisNode['sub_tree']['SELECT'];
+                      }
 
-          break;
+                      foreach ($parseThisNode as $selectNodes) {
+                        $selTmp = explode(".", $selectNodes['base_expr']);
+                        if (count($selTmp) > 1) {
+                          $selColName = $selTmp[1];
+                        } else {
+                          $selColName = $selTmp[0];
+                        }
+
+                        if ($selColName == $tmp[1]) {
+                          $tmp[0] = $selectNodes['alias'];
+                          break;
+                        }
+                      }
+                      break;
+                    }
+                  }
+                }
+
+                $subnode['base_expr'] = trim($tmp[0], "`");
+
+                break;
+              }
+            }
+
+            $subnode['base_expr'] = '`' . $tableList[$tblKey]['alias'] . '`.`' . $subnode['base_expr'] . '`';
+          }
         }
       }
 
-      $subnode['base_expr'] = '`' . $tableList[$tblKey]['alias'] . '`.`' . $subnode['base_expr'] . '`';
+      $new_base_expr .= " " . $subnode['base_expr'];
     }
+
+    $node['base_expr'] = "( " . $new_base_expr . " )";
   }
-}
-
-$new_base_expr .= " " . $subnode['base_expr'];
-}
-
-$node['base_expr'] = "( " . $new_base_expr . " )";
-}
 }
 
 /**
