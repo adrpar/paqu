@@ -763,7 +763,7 @@ EOREGEX
 				$prev = array_pop($stripped);			
 				if($prev['expr_type'] == 'operator' || 
 				   $prev['expr_type'] == 'const' ||
-				   $prev['expr_type'] == 'function' ||
+				   #$prev['expr_type'] == 'function' ||
 				   $prev['expr_type'] == 'expression' ||
 				   #$prev['expr_type'] == 'aggregate_function' || 
 				   $prev['expr_type'] == 'subquery' ||	
@@ -1277,7 +1277,7 @@ EOREGEX
 					} else {
 						$local_expr = $token;
 					}
-	                                $processed = $this->process_expr_list($this->split_sql($local_expr));
+	                $processed = $this->process_expr_list($this->split_sql($local_expr));
 					$type = 'expression';
 					
 					if(count($processed) == 1) {

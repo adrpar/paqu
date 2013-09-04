@@ -389,7 +389,6 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
   PHPSQLaddOuterQueryOrder($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
   PHPSQLaddOuterQueryWhere($sqlTree, $table, $currOuterQuery, $tableList, $recLevel, $currInnerNode);
-var_dump($currOuterQuery); 
   PHPSQLaddOuterQueryHaving($sqlTree, $table, $currOuterQuery);
 
   PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery);
