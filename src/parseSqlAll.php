@@ -110,7 +110,7 @@ function _parseSqlAll_fixAliases(&$sqlTree) {
 	//and node as value
 	$fromList = array();
 
-	if(!array_key_exists("FROM", $sqlTree)) {
+	if(!is_array($sqlTree) || !array_key_exists("FROM", $sqlTree)) {
 		return;
 	}
 
@@ -208,7 +208,7 @@ function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList, &$selectTreeNode = 
  * processQueryWildcard.
  */
 function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false) {
-    if(!array_key_exists('FROM', $sqlTree))
+    if(!is_array($sqlTree) || !array_key_exists('FROM', $sqlTree))
 	    return;
     
     foreach($sqlTree['FROM'] as &$node) {
@@ -230,7 +230,7 @@ function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false) 
  * processQueryWildcard.
  */
 function _parseSqlAll_WHERE(&$sqlTree, $mysqlConn = false, $zendAdapter = false) {
-    if(!array_key_exists('WHERE', $sqlTree))
+    if(!is_array($sqlTree) || !array_key_exists('WHERE', $sqlTree))
 	    return;
 
     foreach($sqlTree['WHERE'] as &$node) {
@@ -253,7 +253,7 @@ function _parseSqlAll_WHERE(&$sqlTree, $mysqlConn = false, $zendAdapter = false)
  * is removed from the sqlTree SELECT node.
  */
 function _parseSqlAll_SELECT(&$sqlTree, $mysqlConn = false, $zendAdapter = false) {
-	if(!array_key_exists('SELECT', $sqlTree))
+	if(!is_array($sqlTree) || !array_key_exists('SELECT', $sqlTree))
 		return;
 
 	$table = false;
