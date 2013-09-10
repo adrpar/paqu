@@ -69,8 +69,6 @@ class ParallelQuery {
     private $checkOnDB = true;                          //!< Run checks on DB or has query already been validated elsewhere 
     private $addRowNumbersToFinalTable = false;         //!< Adds row numbers to final result table
 
-    private $dataDB = false;                            //!< The database where most of the query is done for finding the spider nodes
-
     private $headNodeTables = array();                  //!< List of tables that are completely located on the head node and are not sharded
 
     function __construct() {
@@ -89,10 +87,6 @@ class ParallelQuery {
 
     function setDB($value) {
         $this->defDB = $value;
-    }
-
-    function setDataDB($value) {
-        $this->dataDB = $value;
     }
 
     function setEngine($value) {

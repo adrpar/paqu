@@ -63,10 +63,12 @@ if(!class_exists("PHPSQLCreator"))
  * needed to exchange all SQL * attributes with a complete list of columns.
  */
 function parseSqlAll($sql, $mysqlConn = false, $zendAdapter = false) {
-    $sqlTree = processQueryWildcard($sql, $mysqlConn, $zendAdapter);
+	$sqlTree = envokeParseSqlAllParser($sql);
+
+    $newSqlTree = processQueryWildcard($sqlTree, $mysqlConn, $zendAdapter);
 
     try {
-		$newSql = new PHPSQLCreator($sqlTree->parsed);
+		$newSql = new PHPSQLCreator($newSqlTree->parsed);
     } catch (UnableToCreateSQLException $err) {
 		return $sql;
     }
@@ -74,10 +76,21 @@ function parseSqlAll($sql, $mysqlConn = false, $zendAdapter = false) {
     return $newSql->created;
 }
 
+function envokeParseSqlAllParser($sql) {
+	//it could be, that we are using the newest version of the SQL parser that is included
+	//somewhere else already... If not, use the one we provide
+	if(!class_exists("PHPSQLParser"))
+    	$sqlTree = new PHPSQLParser2($sql);
+    else
+    	$sqlTree = new PHPSQLParser($sql);
+
+    return $sqlTree;
+}
+
 /**
  * @brief Recursive function that acts on a node of the SQL tree to process the
  *	  SQL query.
- * @param sql SQL statement to apply this filter to
+ * @param sqlTree SQL tree
  * @param mysqlConn a properly initialised MySQLI/MySQLII connection to the DB
  * @param zendAdapter a valid ZEND DB adapter
  * @return a new SQL parser tree with the resolved columns
@@ -86,17 +99,10 @@ function parseSqlAll($sql, $mysqlConn = false, $zendAdapter = false) {
  * all the SQL * attributes in subqueries in FROM, WHERE and eventually in the
  * SELECT statement.
  */
-function processQueryWildcard($sql, $mysqlConn = false, $zendAdapter = false) {
-	//it could be, that we are using the newest version of the SQL parser that is included
-	//somewhere else already... If not, use the one we provide
-	if(!class_exists("PHPSQLParser"))
-    	$sqlTree = new PHPSQLParser2($sql);
-    else
-    	$sqlTree = new PHPSQLParser($sql);
-
-    _parseSqlAll_FROM($sqlTree->parsed, $mysqlConn, $zendAdapter);
-    _parseSqlAll_WHERE($sqlTree->parsed, $mysqlConn, $zendAdapter);
-    _parseSqlAll_SELECT($sqlTree->parsed, $mysqlConn, $zendAdapter);
+function processQueryWildcard($sqlTree, $mysqlConn = false, $zendAdapter = false) {
+    _parseSqlAll_FROM($sqlTree, $mysqlConn, $zendAdapter);
+    _parseSqlAll_WHERE($sqlTree, $mysqlConn, $zendAdapter);
+    _parseSqlAll_SELECT($sqlTree, $mysqlConn, $zendAdapter);
 
     //after the rewrite, go through the tree and find any name in WHERE, GROUP, ORDER
     //that needs to be changed as well
@@ -213,7 +219,7 @@ function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false) 
     
     foreach($sqlTree['FROM'] as &$node) {
 		if($node['expr_type'] == "subquery") {
-		    $tree = processQueryWildcard($node['base_expr'], $mysqlConn, $zendAdapter);
+		    $tree = processQueryWildcard($node['sub_tree'], $mysqlConn, $zendAdapter);
 		    $node['sub_tree'] = $tree->parsed;
 		}
     }
@@ -235,7 +241,7 @@ function _parseSqlAll_WHERE(&$sqlTree, $mysqlConn = false, $zendAdapter = false)
 
     foreach($sqlTree['WHERE'] as &$node) {
 		if($node['expr_type'] == "subquery") {
-		    $tree = processQueryWildcard(trim($node['base_expr'], '()'), $mysqlConn, $zendAdapter);
+		    $tree = processQueryWildcard($node['sub_tree'], $mysqlConn, $zendAdapter);
 	    	    $node['sub_tree'] = $tree->parsed;
 		}
     }
