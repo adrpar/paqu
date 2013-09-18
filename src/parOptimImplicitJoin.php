@@ -568,10 +568,9 @@ function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $
       #check if this has already been aliased
       if ($alias == $tmp[0] && strpos($tmp[0], 'agr_')) {
         continue 1;
-      } //taking this out for the moment... 
-      /* else {
-      $node['base_expr'] = $alias . '.`' . trim($node['alias'], '`') . '`';
-      }*/
+      } else {
+        $node['base_expr'] = $alias . '.`' . trim($node['alias'], '`') . '`';
+      }
     }
 
     if (!array_key_exists('where_col', $node) && !array_key_exists('order_clause', $node) && !array_key_exists('group_clause', $node)) {
@@ -1042,8 +1041,6 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
                       } else {
                         $parseThisNode = $toThisNode['sub_tree']['SELECT'];
                       }
-
-                      var_dump($parseThisNode);
 
                       foreach ($parseThisNode as $selectNodes) {
                         $selTmp = explode(".", $selectNodes['base_expr']);
