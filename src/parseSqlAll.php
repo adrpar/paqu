@@ -106,7 +106,7 @@ function processQueryWildcard($sqlTree, $mysqlConn = false, $zendAdapter = false
 
     //after the rewrite, go through the tree and find any name in WHERE, GROUP, ORDER
     //that needs to be changed as well
-    _parseSqlAll_fixAliases($sqlTree->parsed);
+    _parseSqlAll_fixAliases($sqlTree);
 
     return $sqlTree;
 }
