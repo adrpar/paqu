@@ -115,9 +115,12 @@ function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false
 
     foreach($shard_query->subqueries as $key => $query) {
     	if($query['parallel'] === true) {
-  	    $paraQuery = "CALL paquExec(\"" . str_replace("\n", " ", $query[0]) . "\", \"" . $key . "\")";
+        $query[0] = str_replace("\'", "'", $query[0]);
+        $query[0] = str_replace("'", "\'", $query[0]);
+
+  	    $paraQuery = "CALL paquExec('" . str_replace("\n", " ", $query[0]) . "', '" . $key . "')";
   	    
-  	    $dropTableHead = "CALL paquDropTmp(\"" . $key . "\")";
+  	    $dropTableHead = "CALL paquDropTmp('" . $key . "')";
 
   	    array_push($commandArray, $paraQuery);
   	    array_push($dropTables, $dropTableHead);
@@ -132,9 +135,9 @@ function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false
 
   	    $hostTableCreateQuery = "CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard." . $key . " ENGINE=MyISAM " . $limitFreeQuery . " LIMIT 0";
   	    $shardActualQuery = "USE spider_tmp_shard; INSERT INTO spider_tmp_shard." . $key . " ". $query[0]  . ";";
-        $shardActualQuery .= "\nCALL paquLinkTmp(\"" . $key . "\")";
+        $shardActualQuery .= "\nCALL paquLinkTmp('" . $key . "')";
   	    //$dropTableHead = "DROP TABLE spider_tmp_shard." . $key ;
-        $dropTableHead = "CALL paquDropTmp(\"" . $key . "\")";
+        $dropTableHead = "CALL paquDropTmp('" . $key . "')";
 
 
       	array_push($commandArray, $hostTableCreateQuery);
