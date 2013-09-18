@@ -1043,6 +1043,8 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
                         $parseThisNode = $toThisNode['sub_tree']['SELECT'];
                       }
 
+                      var_dump($parseThisNode);
+
                       foreach ($parseThisNode as $selectNodes) {
                         $selTmp = explode(".", $selectNodes['base_expr']);
                         if (count($selTmp) > 1) {
@@ -1067,7 +1069,7 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
               }
             }
 
-            $subnode['base_expr'] = '`' . $tableList[$tblKey]['alias'] . '`.`' . $subnode['base_expr'] . '`';
+            $subnode['base_expr'] = '`' . trim($tableList[$tblKey]['alias'], "`") . '`.`' . $subnode['base_expr'] . '`';
           }
         }
       }
@@ -1434,7 +1436,7 @@ function PHPSQLaddOuterQueryFrom(&$sqlTree, &$table, &$toThisNode, $tableList, $
  */
 function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnArray, &$tableList, $recLevel, $startBranch = true) {
   $countDiffTables = 0;
-  $tblAlias = str_replace($tblAlias, "`", "");
+  $tblAlias = str_replace("`", "", $tblAlias);
 
   $workload = array();
   if (array_key_exists('SELECT', $sqlSelect)) {
@@ -1468,7 +1470,7 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
 
 //	    if ($currTable == $tblAlias || ($tblAlias == $tblDb . "." . $tblName && $currTable === false) || $currTable == $tblName) {
       if ($currTable == $tblAlias || ($currTable === false) || $currTable == $tblName || 
-             $tblAlias = $currDB . "." . $currTable) {
+             $tblAlias == $currDB . "." . $currTable) {
         if ($startBranch === true) {
           array_push($returnArray, $node);
         }

@@ -65,10 +65,10 @@ if(!class_exists("PHPSQLCreator"))
 function parseSqlAll($sql, $mysqlConn = false, $zendAdapter = false) {
 	$sqlTree = envokeParseSqlAllParser($sql);
 
-    $newSqlTree = processQueryWildcard($sqlTree, $mysqlConn, $zendAdapter);
+    $newSqlTree = processQueryWildcard($sqlTree->parsed, $mysqlConn, $zendAdapter);
 
     try {
-		$newSql = new PHPSQLCreator($newSqlTree->parsed);
+		$newSql = new PHPSQLCreator($newSqlTree);
     } catch (UnableToCreateSQLException $err) {
 		return $sql;
     }
