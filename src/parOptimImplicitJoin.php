@@ -1352,7 +1352,7 @@ function PHPSQLaddOuterQueryFrom(&$sqlTree, &$table, &$toThisNode, $tableList, $
     $toThisNode['FROM'] = array();
   }
 
-  foreach ($sqlTree['FROM'] as $node) {
+  foreach ($sqlTree['FROM'] as $key => $node) {
     $tmp = explode('.', $node['table']);
 
     if (count($tmp) == 1) {
@@ -1364,7 +1364,7 @@ function PHPSQLaddOuterQueryFrom(&$sqlTree, &$table, &$toThisNode, $tableList, $
     }
 
     #check if this is the right table
-    if ($currTable == $tblAlias || ($currTable == $tblName && $currDb == $tblDb)) {
+    if ($node['alias'] == $tblAlias || (empty($node['alias']) && ($currTable == $tblAlias  || ($currTable == $tblName && $currDb == $tblDb)))) {
       #create a copy of this node
       $nodeCopy = $node;
 
@@ -1682,16 +1682,16 @@ function PHPSQLrecursCountWhereCond($nodes) {
   $result = 0;
 
   foreach ($nodes as $currNode) {
-   if (is_array($currNode['sub_tree'])) {
-     if ($currNode['expr_type'] != 'subquery') {
-      $result += PHPSQLrecursCountWhereCond($currNode['sub_tree']);
+    if (is_array($currNode['sub_tree'])) {
+      if ($currNode['expr_type'] != 'subquery') {
+        $result += PHPSQLrecursCountWhereCond($currNode['sub_tree']);
+      }
+    } else if ($currNode['expr_type'] == 'colref') {
+      $result += 1;
     }
-  } else if ($currNode['expr_type'] == 'colref') {
-   $result += 1;
- }
-}
+  }
 
-return $result;
+  return $result;
 }
 
 /**
@@ -1929,6 +1929,7 @@ function PHPSQLParseWhereTokens($tree, &$newTree) {
 function PHPSQLParseWhereTokens_groupANDExpressions($tree, &$newTree) {
   $previousNode = array();
   $foundAnd = false;
+  $foundOr = false;
 
   if(!array_key_exists("sub_tree", $newTree)) {
     $newTree['expr_type'] = "expression";
@@ -1962,11 +1963,19 @@ function PHPSQLParseWhereTokens_groupANDExpressions($tree, &$newTree) {
       $currNode = $currSubTree;
     }
 
-    //check if this is an AND
+    //only process if AND is preceeded by a OR
     if($currNode['expr_type'] === "operator" && 
+        ($currNode['base_expr'] === "or" || $currNode['base_expr'] === "||")) {
+
+      $foundOr = true;
+    }
+
+    //check if this is an AND
+    if($foundOr === true && $currNode['expr_type'] === "operator" && 
         ($currNode['base_expr'] === "and" || $currNode['base_expr'] === "&&")) {
 
       $foundAnd = true;
+      $foundOr = false;
 
       $newNode = array();
       $newNode['expr_type'] = "expression";
@@ -1989,6 +1998,7 @@ function PHPSQLParseWhereTokens_groupANDExpressions($tree, &$newTree) {
       PHPSQLParseWhereTokens_createBaseExpr($previousNode);
 
       $foundAnd = false;
+      $foundOr = false;
     } else {
       if(!empty($previousNode)) {
         array_push($newTree['sub_tree'], $previousNode);
