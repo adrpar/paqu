@@ -519,7 +519,7 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
             }
 
             if(empty($parsed['sub_tree'])) {
-                $sql = $parsed['base_expr'];
+                $sql = "(" . trim($parsed['base_expr'], "()") . ")";
             } else {
                 $sql = $this->processSelectStatement($parsed['sub_tree']);
                 $sql = "(" . $sql . ")";
