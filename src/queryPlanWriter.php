@@ -168,16 +168,22 @@ function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false
  */
 function PHPSQLaggregateResult($shard_query, $resultTable, $addRowNumber = false, $aggregateDist = true) {
     #add distinct clause after SELECT in corrdination query if user asks for it
-    if($addRowNumber === true) {
-      $shard_query->coord_sql = str_replace("SELECT", "SELECT @i:=@i+1 AS `row_id`, ", $shard_query->coord_sql);
-    }
-
     if($aggregateDist == true) {
     	if(strpos($shard_query->coord_sql, "DISTINCT") === false) {
   	    $shard_query->coord_sql = str_replace("SELECT", "SELECT DISTINCT", $shard_query->coord_sql);
     	}
     }
     
+    if($addRowNumber === true) {
+      if(strpos($shard_query->coord_sql, "DISTINCT") === false) {
+        $shard_query->coord_sql = str_replace("SELECT", "SELECT @i:=@i+1 AS `row_id`, ", $shard_query->coord_sql);
+      } else {
+        $shard_query->coord_sql = "SELECT @i:=@i+1 AS `row_id`, `distinct_res_table`.* FROM ( " . $shard_query->coord_sql .
+                                  " ) as `distinct_res_table`";
+        var_dump($shard_query->coord_sql);
+      }
+    }
+
     if($addRowNumber === false) {
       $hostResultCreate = "USE spider_tmp_shard; CREATE TABLE " . $resultTable . " ENGINE=MyISAM " . $shard_query->coord_sql;
     } else {
