@@ -134,7 +134,7 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
                 $len = strlen($sql);
                 $sql .= $this->processTable($v, $k);
                 $sql .= $this->processTableExpression($v, $k);
-                $sql .= $this->processSubquery($v, $k);
+                $sql .= $this->processSubQuery($v, $k);
 
                 if ($len == strlen($sql)) {
                     throw new UnableToCreateSQLException('FROM', $k, $v, 'expr_type');
@@ -300,7 +300,7 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
                 $sql .= $this->processOperator($v);
                 $sql .= $this->processConstant($v);
                 $sql .= $this->processColRef($v);
-                $sql .= $this->processSubquery($v);
+                $sql .= $this->processSubQuery($v);
                 $sql .= $this->processInList($v);
                 $sql .= $this->processFunction($v);
                 $sql .= $this->processWhereExpression($v);
@@ -518,8 +518,12 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
                 return "";
             }
 
-            $sql = $this->processSelectStatement($parsed['sub_tree']);
-            $sql = "(" . $sql . ")";
+            if(empty($parsed['sub_tree'])) {
+                $sql = $parsed['base_expr'];
+            } else {
+                $sql = $this->processSelectStatement($parsed['sub_tree']);
+                $sql = "(" . $sql . ")";
+            }
 
             if (isset($parsed['alias'])) {
                 $sql .= $this->processAlias($parsed['alias']);
