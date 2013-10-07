@@ -391,7 +391,7 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
   PHPSQLaddOuterQueryWhere($sqlTree, $table, $currOuterQuery, $tableList, $recLevel, $currInnerNode);
   PHPSQLaddOuterQueryHaving($sqlTree, $table, $currOuterQuery);
 
-  PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery);
+  PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery, $recLevel);
   PHPSQLaddOuterQueryIndex($sqlTree, $table, $currOuterQuery);
 
   PHPSQLaddOuterQueryOptions($sqlTree, $table, $currOuterQuery);
@@ -914,21 +914,21 @@ if ($countColrefs == $countThisColrefs) {
  * 
  * Takes the LIMIT clause from sqlTree and adds it to the current node. 
  */
-function PHPSQLaddOuterQueryLimit(&$sqlTree, &$table, &$toThisNode) {
+function PHPSQLaddOuterQueryLimit(&$sqlTree, &$table, &$toThisNode, $recLevel) {
     #only apply the limit clause
 
-  if (!array_key_exists('LIMIT', $sqlTree)) {
-   return;
- }
+  if (!array_key_exists('LIMIT', $sqlTree) || $recLevel > 0) {
+    return;
+  }
 
-    #construct the HAVING part
- if (!array_key_exists('LIMIT', $toThisNode)) {
-   $toThisNode['LIMIT'] = array();
- }
+  #construct the LIMIT part
+  if (!array_key_exists('LIMIT', $toThisNode)) {
+    $toThisNode['LIMIT'] = array();
+  }
 
- $toThisNode['LIMIT'] = $sqlTree['LIMIT'];
+  $toThisNode['LIMIT'] = $sqlTree['LIMIT'];
 
- unset($sqlTree['LIMIT']);
+  unset($sqlTree['LIMIT']);
 }
 
 /**
@@ -1965,14 +1965,14 @@ function PHPSQLParseWhereTokens_groupANDExpressions($tree, &$newTree) {
 
     //only process if AND is preceeded by a OR
     if($currNode['expr_type'] === "operator" && 
-        ($currNode['base_expr'] === "or" || $currNode['base_expr'] === "||")) {
+        (strtolower($currNode['base_expr']) === "or" || $currNode['base_expr'] === "||")) {
 
       $foundOr = true;
     }
 
     //check if this is an AND
     if($foundOr === true && $currNode['expr_type'] === "operator" && 
-        ($currNode['base_expr'] === "and" || $currNode['base_expr'] === "&&")) {
+        (strtolower($currNode['base_expr']) === "and" || $currNode['base_expr'] === "&&")) {
 
       $foundAnd = true;
       $foundOr = false;
@@ -2047,10 +2047,10 @@ function PHPSQLParseWhereTokens_groupTerms($tree, &$newTree) {
     #a normal node - if this node is an AND or OR, split there
     if(array_key_exists('expr_type', $token) && 
         $token['expr_type'] === "operator" &&
-        ($token['base_expr'] === "or" || $token['base_expr'] === "and")) {
+        (strtolower($token['base_expr']) === "or" || strtolower($token['base_expr']) === "and")) {
 
       //is this the and in the between clause? if yes, ignore this
-      if($token['base_expr'] === "and" && $isBetween === true) {
+      if(strtolower($token['base_expr']) === "and" && $isBetween === true) {
         $isBetween = false;
       } else {
         //it could be that currLeaf is empty - this is the case if a sub_tree has been added

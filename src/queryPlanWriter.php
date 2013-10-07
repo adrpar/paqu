@@ -180,7 +180,6 @@ function PHPSQLaggregateResult($shard_query, $resultTable, $addRowNumber = false
       } else {
         $shard_query->coord_sql = "SELECT @i:=@i+1 AS `row_id`, `distinct_res_table`.* FROM ( " . $shard_query->coord_sql .
                                   " ) as `distinct_res_table`";
-        var_dump($shard_query->coord_sql);
       }
     }
 
