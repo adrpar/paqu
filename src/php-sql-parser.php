@@ -794,7 +794,7 @@ EOREGEX
 		
 			/* Properly escape the alias if it is not escaped */
 		    if ($alias[0] != '`') {
-			    $alias = '`' . str_replace('`','``',$alias) . '`';
+			    $alias = '`' . trim(str_replace('.`','`.`',$alias), "`") . "`";
 			} else {
 			    $alias = '`' . str_replace('`', '', $alias) . '`';
 			}
