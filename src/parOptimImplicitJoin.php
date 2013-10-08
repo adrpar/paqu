@@ -389,10 +389,6 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
   PHPSQLaddOuterQueryOrder($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
   PHPSQLaddOuterQueryWhere($sqlTree, $table, $currOuterQuery, $tableList, $recLevel, $currInnerNode);
-  if($recLevel == 0) {
-  var_dump($sqlTree);
-  var_dump($currOuterQuery);
-  }
   PHPSQLaddOuterQueryHaving($sqlTree, $table, $currOuterQuery);
 
   PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery, $recLevel);
@@ -1105,9 +1101,7 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
 
   #add the stuff in the where_cond to the query and remove from the complete tree
   foreach ($table['where_cond'] as $key => $node) {
-    var_dump($node);
     PHPSQLrewriteAliasWhere($node, $tableList, $recLevel, $currInnerNode);
-    var_dump($node);
 
     #generate an AND node if needed
     if(array_key_exists('oldKey', $node)) {
@@ -2090,7 +2084,7 @@ function PHPSQLParseWhereTokens_groupTerms($tree, &$newTree) {
     //is this a between case?
     if(array_key_exists('expr_type', $token) && 
         $token['expr_type'] === "operator" &&
-        $token['base_expr'] === "between") {
+        strtolower($token['base_expr']) === "between") {
       
       $isBetween = true;
     }
