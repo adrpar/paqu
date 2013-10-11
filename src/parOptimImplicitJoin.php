@@ -189,9 +189,6 @@ function linkNestedWheresToTree(&$nestedQuery, &$subQueries) {
  * This function will loop through the FROM node on the top level of the nested query tree to find all
  * the subqueries that need to be linked.
  * 
- * This function does not need to take care of any nested statements in FROM, since they are already processed
- * by the recursive build of the subquery tree.
- * 
  */
 function linkSubqueriesToTree(&$nestedQuery, &$subQueries) {
   //fix possible errors in the aliases when comming from sub-trees
@@ -202,6 +199,9 @@ function linkSubqueriesToTree(&$nestedQuery, &$subQueries) {
   //fix subquery tree first
   foreach ($nestedQuery['FROM'] as &$subQuery) {
     if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
+      #we need to descend further down.
+      linkSubqueriesToTree($subQuery['sub_tree'], $subQueries);
+
       #find subquery
       foreach ($subQueries as $subNode) {
         if (array_key_exists('alias', $subQuery) && $subQuery['alias'] == $subNode['alias']) {
@@ -422,7 +422,6 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
   if ($currInnerNode !== false) {
     linkInnerQueryToOuter($currOuterQuery, $currInnerNode, $tableList, $recLevel);
   }
-
   $currDepQueryNode['sub_tree'] = $currOuterQuery;
 
   #the upper most node is not a subquery of course...
@@ -1011,8 +1010,10 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
         $tmp = explode('.', $subnode['base_expr']);
         if (count($tmp) < 1) {
           $currTable = false;
+          $currCol = $tmp[0];
         } else {
           $currTable = $tmp[0];
+          $currCol = implode(".", array_slice($tmp, 1));
         }
 
         if ($currTable !== false) {
@@ -1027,7 +1028,7 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
       			#rewrite name of where_node to properly alias it
       			#rewrite name to alias name if needed
             foreach ($listOfCols as $selNode) {
-              if (trim($selNode['base_expr'], ' ') == $subnode['base_expr']) {
+              if (trim($selNode['base_expr'], ' ') == $currCol) {
                 $tmp = explode(".", trim($selNode['alias'], '`'));
                 if (count($tmp) > 1) {
   				        #search for proper name in the subquery tree
@@ -1562,7 +1563,7 @@ function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList,
     $tmpList2 = array_merge($tmpList2, $tmpList3);
   }
  
-   $listOfWhereCols = array_merge($tmpList1, $tmpList2);
+  $listOfWhereCols = array_merge($tmpList1, $tmpList2);
 
   foreach ($listOfWhereCols as $cols) {
     $find = false;
@@ -1589,34 +1590,41 @@ function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList,
  * @return array with participating columns
  * 
  * Extracts all the participating columns from the WHERE tree for a given table and returns
- * an array with all the columns.
+ * an array with all the columns. It also strips the involved columns from the table / alias
+ * name.
  */
 function PHPSQLgetAllColsFromWhere($whereTree, $table) {
   $returnArray = array();
 
   foreach ($whereTree as $node) {
-   if (is_array($node['sub_tree']) && $node['expr_type'] != "subquery") {
-     $tmpArray = PHPSQLgetAllColsFromWhere($node['sub_tree'], $table);
-     $returnArray = array_merge($returnArray, $tmpArray);
-   }
+    if (is_array($node['sub_tree']) && $node['expr_type'] != "subquery") {
+      $tmpArray = PHPSQLgetAllColsFromWhere($node['sub_tree'], $table);
+      $returnArray = array_merge($returnArray, $tmpArray);
+    }
 
-   if($node['expr_type'] != 'colref')
-     continue;
-   
-   $tmp = explode('.', $node['base_expr']);
-   $currTable = $tmp[0];
+    if($node['expr_type'] != 'colref')
+      continue;
 
-   if ($table == $currTable || (count($tmp) == 1 && $table === "")) {
-     $newNode = array();
-     $newNode['expr_type'] = $node['expr_type'];
-     $newNode['alias'] = "`" . $node['base_expr'] . "`";
-     $newNode['base_expr'] = $node['base_expr'];
-     $newNode['sub_tree'] = $node['sub_tree'];
-     array_push($returnArray, $newNode);
-   }
- }
+    $tmp = explode('.', $node['base_expr']);
+    $currTable = $tmp[0];
 
- return $returnArray;
+    #getting rid of the table/alias name in the column description (but only if a table
+    #name is provided $table)
+    if(!empty($table) && count($tmp) > 1) {
+      $node['base_expr'] = implode(".", array_slice($tmp, 1));
+    }
+
+    if ($table == $currTable || (count($tmp) == 1 && $table === "")) {
+      $newNode = array();
+      $newNode['expr_type'] = $node['expr_type'];
+      $newNode['alias'] = "`" . $node['base_expr'] . "`";
+      $newNode['base_expr'] = $node['base_expr'];
+      $newNode['sub_tree'] = $node['sub_tree'];
+      array_push($returnArray, $newNode);
+    }
+  }
+
+  return $returnArray;
 }
 
 /**

@@ -175,7 +175,7 @@ function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList, &$selectTreeNode = 
 
 		//we only need to change this column if it was retrieved from a subquery
 		if($table !== false && array_key_exists($table, $fromList) && 
-			$fromList[$table]['expr_type'] == "subquery") {
+			$fromList[$table]['expr_type'] == "subquery" && $fromList[$table]['sub_tree'] != NULL) {
 			//look this column up in the sub select
 			foreach($fromList[$table]['sub_tree']['SELECT'] as $selNode) {
                 if($selNode['alias'] !== false && strpos($selNode['alias']['name'], $column)) {
@@ -218,7 +218,7 @@ function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false) 
 	    return;
     
     foreach($sqlTree['FROM'] as &$node) {
-		if($node['expr_type'] == "subquery") {
+		if($node['expr_type'] == "subquery" && $node['sub_tree'] != NULL) {
 		    $tree = processQueryWildcard($node['sub_tree'], $mysqlConn, $zendAdapter);
 		    $node['sub_tree'] = $tree->parsed;
 		}
