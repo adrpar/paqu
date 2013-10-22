@@ -363,7 +363,14 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
             }
 
             $sql = "";
+            $oldToken = NULL;
             foreach ($parsed['sub_tree'] as $k => $v) {
+                if(!empty($oldToken) && $v['expr_type'] !== "operator" && $oldToken['expr_type'] !== "operator") {
+                    $sql .= ($this->isReserved($oldToken)  ? " " : ", ");
+                } else {
+                    $sql .= " ";
+                }
+                
                 $len = strlen($sql);
                 $sql .= $this->processReserved($v);
                 $sql .= $this->processSign($v);
@@ -378,10 +385,10 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
                     throw new UnableToCreateSQLException('function subtree', $k, $v, 'expr_type');
                 }
 
-                $sql .= ($this->isReserved($v) ? " " : ",");
+                $oldToken = $v;
             }
 
-            $sql = $parsed['base_expr'] . "(" . substr($sql, 0, -1) . ")";
+            $sql = $parsed['base_expr'] . "(" . trim($sql, "() ") . ")";
 
             if(array_key_exists('alias', $parsed)) {
                 $sql .= $this->processAlias($parsed['alias']);
