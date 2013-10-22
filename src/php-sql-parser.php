@@ -698,7 +698,7 @@ EOREGEX
 	
 			$tokens = $this->split_sql($expression);
 			$token_count = count($tokens);
-	
+
 			/* Determine if there is an explicit alias after the AS clause.
 			If AS is found, then the next non-whitespace token is captured as the alias.
 			The tokens after (and including) the AS are removed.
@@ -714,12 +714,8 @@ EOREGEX
 					$aliased = true;
 			    }
 			    
-			    
 				$token = strtoupper($tokens[$i]);
-				if(trim($token)) {
-					$stripped[] = $tokens[$i];
-				}
-	
+
 				if($token == 'AS') {
 					unset($tokens[$i]);
 					$capture = true;
@@ -733,6 +729,11 @@ EOREGEX
 					unset($tokens[$i]);
 					continue;
 				}
+
+				if(trim($token)) {
+					$stripped[] = $tokens[$i];
+				}
+	
 				$base_expr .= $tokens[$i];
 
 			    if($aliased === true && strpos($tokens[$i], ".") !== false && $i != 0) {
@@ -743,7 +744,7 @@ EOREGEX
 			}
 
 			$stripped = $this->process_expr_list($stripped);
-			
+
 			$aliased = false;
 			for($i=0;$i<count($stripped);++$i) {
 			    if(strpos($stripped[$i]['base_expr'], "`") !== false) {
@@ -802,10 +803,10 @@ EOREGEX
 			$type='expression';
 
 			if(substr(trim($base_expr),0,1) == '(') {
-				$base_expr = substr($expression,1,-1);
-				if(preg_match('/^sel/i', $base_expr)) {
+				$tmp_base_expr = trim($base_expr, "() ");
+				if(preg_match('/^sel/i', $tmp_base_expr)) {
 					$type='subquery';
-					$processed = $this->parse($base_expr);
+					$processed = $this->parse($tmp_base_expr);
 				}
 			}
 			if(!$processed) {
@@ -1232,7 +1233,6 @@ EOREGEX
 				    if(strpos($tokens[$key+1], '(') !== false && strpos($tokens[$key+1], ')') !== false)
 					    $funcCand = 1;
 				}
-				
 				/* is a reserved word? AP: OR a custom function? */
 				if(($type != 'operator' && $type != 'in-list' && $type != 'sub_expr') && (in_array($upper, $this->reserved) || $funcCand == 1)) {
 					$token = $upper;
