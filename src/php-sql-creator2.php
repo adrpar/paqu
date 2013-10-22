@@ -365,6 +365,10 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
             $sql = "";
             foreach ($parsed['sub_tree'] as $k => $v) {
                 $len = strlen($sql);
+                $sql .= $this->processReserved($v);
+                $sql .= $this->processSign($v);
+                $sql .= $this->processSelectExpression($v);
+                $sql .= $this->processOperator($v);
                 $sql .= $this->processFunction($v);
                 $sql .= $this->processConstant($v);
                 $sql .= $this->processColRef($v);
