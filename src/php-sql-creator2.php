@@ -395,6 +395,14 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
             return $sql;
         }
 
+        protected function processSign($parsed) {
+            if ($parsed['expr_type'] !== 'sign') {
+                return "";
+            }
+            $sql = $parsed['base_expr'];
+            return $sql;
+        }
+
         protected function processSubTree($parsed, $delim = " ") {
             if ($parsed['sub_tree'] === '') {
                 return "";
@@ -402,6 +410,9 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
             $sql = "";
             foreach ($parsed['sub_tree'] as $k => $v) {
                 $len = strlen($sql);
+                $sql .= $this->processReserved($v);
+                $sql .= $this->processSign($v);
+                $sql .= $this->processSelectExpression($v);
                 $sql .= $this->processFunction($v);
                 $sql .= $this->processConstant($v);
                 $sql .= $this->processColRef($v);
