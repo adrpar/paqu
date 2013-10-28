@@ -1114,18 +1114,18 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
       $oldKey = false;
     }
 
-    if ($key != 0 && $node['expr_type'] != "operator" && $oldKey !== false && $sqlTree['WHERE'][$oldKey]['base_expr'] == 'and' ) {
-      $andNode = array();
-      $andNode['base_expr'] = "and";
-      $andNode['expr_type'] = "operator";
-      $andNode['sub_tree'] = false;
-      array_push($toThisNode['WHERE'], $andNode);
+    $operatorNode = false;
+    if (array_key_exists('operator', $node)) {
+      $operatorNode = $node['operator'];
     } else if ($node['expr_type'] == "operator" && $key == count($table['where_cond']) - 1) {
       continue;
     } else if ($node['expr_type'] == "operator" && $node['base_expr'] == 'and') {
       continue;
     }
 
+    if($operatorNode !== false) {
+      array_push($toThisNode['WHERE'], $operatorNode);
+    }
     array_push($toThisNode['WHERE'], $node);
   }
 }
