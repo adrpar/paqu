@@ -1,35 +1,35 @@
 <?php
 
 /*
-  Copyright (c) 2012, Adrian Partl @ Leibniz Inst. for Astrophysics Potsdam
-  All rights reserved.
+	Copyright (c) 2012, Adrian Partl @ Leibniz Inst. for Astrophysics Potsdam
+	All rights reserved.
 
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions are met:
+	Redistribution and use in source and binary forms, with or without
+	modification, are permitted provided that the following conditions are met:
  * Redistributions of source code must retain the above copyright
-  notice, this list of conditions and the following disclaimer.
+	notice, this list of conditions and the following disclaimer.
  * Redistributions in binary form must reproduce the above copyright
-  notice, this list of conditions and the following disclaimer in the
-  documentation and/or other materials provided with the distribution.
+	notice, this list of conditions and the following disclaimer in the
+	documentation and/or other materials provided with the distribution.
  * Neither the name of the <organization> nor the
-  names of its contributors may be used to endorse or promote products
-  derived from this software without specific prior written permission.
+	names of its contributors may be used to endorse or promote products
+	derived from this software without specific prior written permission.
 
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
-  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+	ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+	DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+	DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+	(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+	LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+	ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+	SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-  error_reporting(E_ALL);
+	error_reporting(E_ALL);
 
-  require_once 'php-sql-parser.php';
+	require_once 'php-sql-parser.php';
 
 /**
  * @file parOptimImplicitJoin.php
@@ -107,42 +107,42 @@
  *	-# #Link the user defined subqueries from the FROM and WHERE statements to the new nested query tree.
  */
 function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
-  #check for subqueries
-  #this handles nested subqueries that the user already provided. no idea how to handle these
-  #together with the automatic joins found below...
-  $subQueries = array();
-  foreach ($sqlTree['FROM'] as $subQuery) {
-    if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
-      $subQuery['sub_tree'] = PHPSQLbuildShardQuery($subQuery['sub_tree']);
-      array_push($subQueries, $subQuery);
-    }
-  }
-  if (!empty($sqlTree['WHERE'])) {
-    foreach ($sqlTree['WHERE'] as $node) {
-      if ($node['expr_type'] == 'subquery') {
-        $node['sub_tree'] = PHPSQLbuildShardQuery($node['sub_tree']);
-        array_push($subQueries, $node);
-      }
-    }
-  }
+	#check for subqueries
+	#this handles nested subqueries that the user already provided. no idea how to handle these
+	#together with the automatic joins found below...
+	$subQueries = array();
+	foreach ($sqlTree['FROM'] as $subQuery) {
+		if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
+			$subQuery['sub_tree'] = PHPSQLbuildShardQuery($subQuery['sub_tree']);
+			array_push($subQueries, $subQuery);
+		}
+	}
+	if (!empty($sqlTree['WHERE'])) {
+		foreach ($sqlTree['WHERE'] as $node) {
+			if ($node['expr_type'] == 'subquery') {
+				$node['sub_tree'] = PHPSQLbuildShardQuery($node['sub_tree']);
+				array_push($subQueries, $node);
+			}
+		}
+	}
 
-  $newSqlTree = PHPSQLGroupWhereTerms($sqlTree);
+	$newSqlTree = PHPSQLGroupWhereTerms($sqlTree);
 
-  $listOfTables = array();
-  PHPSQLGroupTablesAndCols($newSqlTree, $listOfTables);
+	$listOfTables = array();
+	PHPSQLGroupTablesAndCols($newSqlTree, $listOfTables);
 
-  $dependantList = PHPSQLGroupWhereCond($newSqlTree, $listOfTables);
+	$dependantList = PHPSQLGroupWhereCond($newSqlTree, $listOfTables);
 
-  PHPSQLCountWhereConditions($listOfTables);
-  $listOfTables = PHPSQLdetStartTable($listOfTables, $headNodeTables);
+	PHPSQLCountWhereConditions($listOfTables);
+	$listOfTables = PHPSQLdetStartTable($listOfTables, $headNodeTables);
 
-  $nestedQuery = PHPSQLbuildNestedQuery($newSqlTree, $listOfTables, $dependantList, 0);
+	$nestedQuery = PHPSQLbuildNestedQuery($newSqlTree, $listOfTables, $dependantList, 0);
 
-  #link subqueries
-  linkSubqueriesToTree($nestedQuery, $subQueries);
-  linkNestedWheresToTree($nestedQuery, $subQueries);
+	#link subqueries
+	linkSubqueriesToTree($nestedQuery, $subQueries);
+	linkNestedWheresToTree($nestedQuery, $subQueries);
 
-  return $nestedQuery;
+	return $nestedQuery;
 }
 
 /**
@@ -159,26 +159,26 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
  * 
  */
 function linkNestedWheresToTree(&$nestedQuery, &$subQueries) {
-  if (array_key_exists('WHERE', $nestedQuery)) {
-    foreach ($nestedQuery['WHERE'] as &$whereNode) {
-      if ($whereNode['sub_tree'] !== false) {
-        foreach ($whereNode['sub_tree'] as &$subQuery) {
-          if ($subQuery['expr_type'] == "subquery") {
-            #find subquery
-            foreach ($subQueries as $node) {
-              if (!array_key_exists('expr_type', $node))
-                continue;
+	if (array_key_exists('WHERE', $nestedQuery)) {
+		foreach ($nestedQuery['WHERE'] as &$whereNode) {
+			if ($whereNode['sub_tree'] !== false) {
+				foreach ($whereNode['sub_tree'] as &$subQuery) {
+					if ($subQuery['expr_type'] == "subquery") {
+						#find subquery
+						foreach ($subQueries as $node) {
+							if (!array_key_exists('expr_type', $node))
+								continue;
 
-              if ($node['expr_type'] == 'subquery' && $subQuery['base_expr'] == $node['base_expr']) {
-                $subQuery['sub_tree'] = $node['sub_tree'];
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+							if ($node['expr_type'] == 'subquery' && $subQuery['base_expr'] == $node['base_expr']) {
+								$subQuery['sub_tree'] = $node['sub_tree'];
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 /**
@@ -191,55 +191,55 @@ function linkNestedWheresToTree(&$nestedQuery, &$subQueries) {
  * 
  */
 function linkSubqueriesToTree(&$nestedQuery, &$subQueries) {
-  //fix possible errors in the aliases when comming from sub-trees
-  //create a list of all SELECT columns in sub-trees and compare them with the
-  //ones in this selectTree's SELECT statement. If errors in the base_expr are
-  //found, correct them accordingly
+	//fix possible errors in the aliases when comming from sub-trees
+	//create a list of all SELECT columns in sub-trees and compare them with the
+	//ones in this selectTree's SELECT statement. If errors in the base_expr are
+	//found, correct them accordingly
 
-  //fix subquery tree first
-  foreach ($nestedQuery['FROM'] as &$subQuery) {
-    if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
-      #we need to descend further down.
-      linkSubqueriesToTree($subQuery['sub_tree'], $subQueries);
+	//fix subquery tree first
+	foreach ($nestedQuery['FROM'] as &$subQuery) {
+		if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
+			#we need to descend further down.
+			linkSubqueriesToTree($subQuery['sub_tree'], $subQueries);
 
-      #find subquery
-      foreach ($subQueries as $subNode) {
-        if (array_key_exists('alias', $subQuery) && $subQuery['alias'] == $subNode['alias']) {
-          //push this further down if needed
-          foreach($subQuery['sub_tree']['FROM'] as &$currQueryNode) {
-            if($currQueryNode['table'] == 'DEPENDENT-SUBQUERY') {
-              linkSubqueriesToTree($currQueryNode['sub_tree'], $subQueries);
-            }
-          }
+			#find subquery
+			foreach ($subQueries as $subNode) {
+				if (array_key_exists('alias', $subQuery) && $subQuery['alias'] == $subNode['alias']) {
+					//push this further down if needed
+					foreach($subQuery['sub_tree']['FROM'] as &$currQueryNode) {
+						if($currQueryNode['table'] == 'DEPENDENT-SUBQUERY') {
+							linkSubqueriesToTree($currQueryNode['sub_tree'], $subQueries);
+						}
+					}
 
-          $subQuery['sub_tree'] = $subNode['sub_tree'];
-          fixSelectsInAliasedSubquery($nestedQuery, $subQuery['sub_tree'], $subQuery['alias']);
-          break;
-        }
-      }
-    }
-  }
+					$subQuery['sub_tree'] = $subNode['sub_tree'];
+					fixSelectsInAliasedSubquery($nestedQuery, $subQuery['sub_tree'], $subQuery['alias']);
+					break;
+				}
+			}
+		}
+	}
 
-  //columnList will hold column name as key an corresponding table alias as value
-  $columnList = array();
+	//columnList will hold column name as key an corresponding table alias as value
+	$columnList = array();
 
-  foreach ($nestedQuery['FROM'] as $fromNode) {
-    if($fromNode['table'] === "DEPENDENT-SUBQUERY") {
-      $currSubNode = $fromNode['sub_tree'];
-      $currAlias = trim($fromNode['alias'], "`");
+	foreach ($nestedQuery['FROM'] as $fromNode) {
+		if($fromNode['table'] === "DEPENDENT-SUBQUERY") {
+			$currSubNode = $fromNode['sub_tree'];
+			$currAlias = trim($fromNode['alias'], "`");
 
-      foreach ($currSubNode['SELECT'] as $subCol) {
-        $columnList[trim($subCol['alias'], "`")] = $currAlias;
-      }
-    }
-  }
+			foreach ($currSubNode['SELECT'] as $subCol) {
+				$columnList[trim($subCol['alias'], "`")] = $currAlias;
+			}
+		}
+	}
 
-  //go through SELECT of the selectTree and correct all mistakes
-  foreach ($nestedQuery['SELECT'] as &$selNode) {
-    if(array_key_exists($selNode['base_expr'], $columnList)) {
-      $selNode['base_expr'] = "`" . $columnList[$selNode['base_expr']] . "`.`" . $selNode['base_expr'] . "`";
-    }
-  }
+	//go through SELECT of the selectTree and correct all mistakes
+	foreach ($nestedQuery['SELECT'] as &$selNode) {
+		if(array_key_exists($selNode['base_expr'], $columnList)) {
+			$selNode['base_expr'] = "`" . $columnList[$selNode['base_expr']] . "`.`" . $selNode['base_expr'] . "`";
+		}
+	}
 }
 
 /**
@@ -256,77 +256,77 @@ function linkSubqueriesToTree(&$nestedQuery, &$subQueries) {
  * 
  */
 function fixSelectsInAliasedSubquery(&$selectTree, &$subQuery, $tableAlias) {
-  //fix possible errors in the aliases when comming from sub-trees
-  //create a list of all SELECT columns in sub-trees and compare them with the
-  //ones in this selectTree's SELECT statement. If errors in the base_expr are
-  //found, correct them accordingly
+	//fix possible errors in the aliases when comming from sub-trees
+	//create a list of all SELECT columns in sub-trees and compare them with the
+	//ones in this selectTree's SELECT statement. If errors in the base_expr are
+	//found, correct them accordingly
 
-  //columnList will hold column name as key an corresponding table alias as value
+	//columnList will hold column name as key an corresponding table alias as value
 
-  //due this here again, possible errors might have been induced through tree merger
-  //TODO: Fully assess this case
+	//due this here again, possible errors might have been induced through tree merger
+	//TODO: Fully assess this case
 
-  $columnList = array();
+	$columnList = array();
 
-  foreach ($selectTree['FROM'] as $fromNode) {
-    if($fromNode['table'] === "DEPENDENT-SUBQUERY") {
-      $currSubNode = $fromNode['sub_tree'];
-      $currAlias = trim($fromNode['alias'], "`");
+	foreach ($selectTree['FROM'] as $fromNode) {
+		if($fromNode['table'] === "DEPENDENT-SUBQUERY") {
+			$currSubNode = $fromNode['sub_tree'];
+			$currAlias = trim($fromNode['alias'], "`");
 
-      foreach ($currSubNode['SELECT'] as $subCol) {
-        $columnList[trim($subCol['alias'], "`")] = $currAlias;
-      }
-    }
-  }
+			foreach ($currSubNode['SELECT'] as $subCol) {
+				$columnList[trim($subCol['alias'], "`")] = $currAlias;
+			}
+		}
+	}
 
-  //go through SELECT of the selectTree and correct all mistakes
-  foreach ($selectTree['SELECT'] as &$selNode) {
-    if(array_key_exists($selNode['base_expr'], $columnList)) {
-      $selNode['base_expr'] = "`" . $columnList[$selNode['base_expr']] . "`.`" . $selNode['base_expr'] . "`";
-    }
-  }
+	//go through SELECT of the selectTree and correct all mistakes
+	foreach ($selectTree['SELECT'] as &$selNode) {
+		if(array_key_exists($selNode['base_expr'], $columnList)) {
+			$selNode['base_expr'] = "`" . $columnList[$selNode['base_expr']] . "`.`" . $selNode['base_expr'] . "`";
+		}
+	}
 
-  foreach ($selectTree['SELECT'] as &$selNode) {
-    preg_match("/`?([^`]*)`?\.?(.*)/", $selNode['base_expr'], $tmp);
-    if ($tmp[2] !== "") {
-      $table = $tmp[2];
-      $alias = $tmp[1];
-    } else {
-      $table = $tmp[1];
-      $alias = false;
-    }
+	foreach ($selectTree['SELECT'] as &$selNode) {
+		preg_match("/`?([^`]*)`?\.?(.*)/", $selNode['base_expr'], $tmp);
+		if ($tmp[2] !== "") {
+			$table = $tmp[2];
+			$alias = $tmp[1];
+		} else {
+			$table = $tmp[1];
+			$alias = false;
+		}
 
-    if (trim($alias, "`") === trim($tableAlias, "`")) {
-      //find column in subquery
-      $tmp2 = explode(".", trim($table, "`"));
-      if (count($tmp2) == 1) {
-        $subTable = $tmp2[0];
-      } else {
-        $subTable = $tmp2[count($tmp2) - 1];
-      }
+		if (trim($alias, "`") === trim($tableAlias, "`")) {
+			//find column in subquery
+			$tmp2 = explode(".", trim($table, "`"));
+			if (count($tmp2) == 1) {
+				$subTable = $tmp2[0];
+			} else {
+				$subTable = $tmp2[count($tmp2) - 1];
+			}
 
-      foreach ($subQuery['SELECT'] as $node) {
-        preg_match("/`?([^`]*)`?\.?(.*)/", $node['base_expr'], $tmp3);
-        if ($tmp3[2] !== "") {
-          $nodeTable = $tmp3[2];
-        } else {
-          $nodeTable = $tmp3[1];
-        }
+			foreach ($subQuery['SELECT'] as $node) {
+				preg_match("/`?([^`]*)`?\.?(.*)/", $node['base_expr'], $tmp3);
+				if ($tmp3[2] !== "") {
+					$nodeTable = $tmp3[2];
+				} else {
+					$nodeTable = $tmp3[1];
+				}
 
-        if ($subTable === $nodeTable) {
-          $selNode['base_expr'] = "`" . $tableAlias . "`.`" . trim($node['alias'], "`") . "`";
-        }
-      }
-    }
+				if ($subTable === $nodeTable) {
+					$selNode['base_expr'] = "`" . $tableAlias . "`.`" . trim($node['alias'], "`") . "`";
+				}
+			}
+		}
 
-    //check the table only (without alias) cases that they are sane
-    if($alias === false) {
-      $tmp2 = explode(".", trim($table, "`"));
-      if(count($tmp2) == 2 && $tmp2[0] === trim($tableAlias, "`")) {
-        //$selNode['base_expr'] = "`" . $tableAlias . "`.`" . trim($selNode['base_expr'], "`") . "`";
-      }
-    }
-  }
+		//check the table only (without alias) cases that they are sane
+		if($alias === false) {
+			$tmp2 = explode(".", trim($table, "`"));
+			if(count($tmp2) == 2 && $tmp2[0] === trim($tableAlias, "`")) {
+				//$selNode['base_expr'] = "`" . $tableAlias . "`.`" . trim($selNode['base_expr'], "`") . "`";
+			}
+		}
+	}
 }
 
 /**
@@ -353,84 +353,84 @@ function fixSelectsInAliasedSubquery(&$selectTree, &$subQuery, $tableAlias) {
  * 
  */
 function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recLevel) {
-  //create a copy of the initial sql tree for cleanup work if this is the 0th recursion level
-  if($recLevel == 0) {
-    $sqlTreeCopy = $sqlTree;
-  }
+	//create a copy of the initial sql tree for cleanup work if this is the 0th recursion level
+	if($recLevel == 0) {
+		$sqlTreeCopy = $sqlTree;
+	}
  
-  $currInnerNode = false;
+	$currInnerNode = false;
 
-  #build recursion tree
-  if ($recLevel < count($tableList) - 1) {
-    $currInnerNode = PHPSQLbuildNestedQuery($sqlTree, $tableList, $dependantWheres, $recLevel + 1);
-  }
+	#build recursion tree
+	if ($recLevel < count($tableList) - 1) {
+		$currInnerNode = PHPSQLbuildNestedQuery($sqlTree, $tableList, $dependantWheres, $recLevel + 1);
+	}
 
-  $table = $tableList[$recLevel];
+	$table = $tableList[$recLevel];
 
-  #now that we know where to start, build the SELECT tree
-  $currDepQueryNode = array();
-  $currDepQueryNode['table'] = 'DEPENDENT-SUBQUERY';
-  $currDepQueryNode['alias'] = $table['alias'];
-  $currDepQueryNode['join_type'] = "JOIN";
-  $currDepQueryNode['ref_type'] = '';
-  $currDepQueryNode['ref_clause'] = '';
-  $currDepQueryNode['base_expr'] = '';
-  $currDepQueryNode['sub_tree'] = false;
+	#now that we know where to start, build the SELECT tree
+	$currDepQueryNode = array();
+	$currDepQueryNode['table'] = 'DEPENDENT-SUBQUERY';
+	$currDepQueryNode['alias'] = $table['alias'];
+	$currDepQueryNode['join_type'] = "JOIN";
+	$currDepQueryNode['ref_type'] = '';
+	$currDepQueryNode['ref_clause'] = '';
+	$currDepQueryNode['base_expr'] = '';
+	$currDepQueryNode['sub_tree'] = false;
 
-  $currOuterQuery = array();
+	$currOuterQuery = array();
 
-  #there is always an inner query and and outer one which will be joined (if exists of course)
-  PHPSQLaddOuterQuerySelect($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
-  PHPSQLaddOuterQueryFrom($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
+	#there is always an inner query and and outer one which will be joined (if exists of course)
+	PHPSQLaddOuterQuerySelect($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
+	PHPSQLaddOuterQueryFrom($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
-  PHPSQLaddOuterQueryUpdate($sqlTree, $table, $currOuterQuery);
+	PHPSQLaddOuterQueryUpdate($sqlTree, $table, $currOuterQuery);
 
-  PHPSQLaddOuterQueryGroup($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
-  PHPSQLaddOuterQueryOrder($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
+	PHPSQLaddOuterQueryGroup($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
+	PHPSQLaddOuterQueryOrder($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
-  PHPSQLaddOuterQueryWhere($sqlTree, $table, $currOuterQuery, $tableList, $recLevel, $currInnerNode);
-  PHPSQLaddOuterQueryHaving($sqlTree, $table, $currOuterQuery);
+	PHPSQLaddOuterQueryWhere($sqlTree, $table, $currOuterQuery, $tableList, $recLevel, $currInnerNode);
+	PHPSQLaddOuterQueryHaving($sqlTree, $table, $currOuterQuery);
 
-  PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery, $recLevel);
-  PHPSQLaddOuterQueryIndex($sqlTree, $table, $currOuterQuery);
+	PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery, $recLevel);
+	PHPSQLaddOuterQueryIndex($sqlTree, $table, $currOuterQuery);
 
-  PHPSQLaddOuterQueryOptions($sqlTree, $table, $currOuterQuery);
+	PHPSQLaddOuterQueryOptions($sqlTree, $table, $currOuterQuery);
 
-  #check if we have to add some stuff for two-pass aggregation functions such as stddev (like adding an average calculation)
-  #we need to add a subquery producing the temporary result here, so we add stuff to FROM and SELECT!
-  //PHPSQLaddAggregateTwoPassSubQuery($currOuterQuery);
+	#check if we have to add some stuff for two-pass aggregation functions such as stddev (like adding an average calculation)
+	#we need to add a subquery producing the temporary result here, so we add stuff to FROM and SELECT!
+	//PHPSQLaddAggregateTwoPassSubQuery($currOuterQuery);
 
-  if ($recLevel == 0) {
-    #only consider these at level 0
-    if (!empty($sqlTree['SET']))
-      throw new RuntimeException('Inner Query SET: You have hit a not yet supported feature');
-    if (!empty($sqlTree['DUPLICATE']))
-      throw new RuntimeException('Inner Query DUPLICATE: You have hit a not yet supported feature');
-    if (!empty($sqlTree['INSERT']))
-      throw new RuntimeException('Inner Query INSERT: You have hit a not yet supported feature');
-    if (!empty($sqlTree['REPLACE']))
-      throw new RuntimeException('Inner Query REPLACE: You have hit a not yet supported feature');
-    if (!empty($sqlTree['DELETE']))
-      throw new RuntimeException('Inner Query DELETE: You have hit a not yet supported feature');
-  }
+	if ($recLevel == 0) {
+		#only consider these at level 0
+		if (!empty($sqlTree['SET']))
+			throw new RuntimeException('Inner Query SET: You have hit a not yet supported feature');
+		if (!empty($sqlTree['DUPLICATE']))
+			throw new RuntimeException('Inner Query DUPLICATE: You have hit a not yet supported feature');
+		if (!empty($sqlTree['INSERT']))
+			throw new RuntimeException('Inner Query INSERT: You have hit a not yet supported feature');
+		if (!empty($sqlTree['REPLACE']))
+			throw new RuntimeException('Inner Query REPLACE: You have hit a not yet supported feature');
+		if (!empty($sqlTree['DELETE']))
+			throw new RuntimeException('Inner Query DELETE: You have hit a not yet supported feature');
+	}
 
-  #resort the table list, now taking all the dependant queries for which data is already gathered into account
-  #dependant queries will have higher priorities than other constraints
-  PHPSQLresortCondTableList($tableList, $dependantWheres, $recLevel);
+	#resort the table list, now taking all the dependant queries for which data is already gathered into account
+	#dependant queries will have higher priorities than other constraints
+	PHPSQLresortCondTableList($tableList, $dependantWheres, $recLevel);
 
-  #link to the tree
-  if ($currInnerNode !== false) {
-    linkInnerQueryToOuter($currOuterQuery, $currInnerNode, $tableList, $recLevel);
-  }
-  $currDepQueryNode['sub_tree'] = $currOuterQuery;
+	#link to the tree
+	if ($currInnerNode !== false) {
+		linkInnerQueryToOuter($currOuterQuery, $currInnerNode, $tableList, $recLevel);
+	}
+	$currDepQueryNode['sub_tree'] = $currOuterQuery;
 
-  #the upper most node is not a subquery of course...
-  if ($recLevel == 0) {
-    cleanSelectToResembleQuery($sqlTreeCopy, $currOuterQuery);
-    return $currOuterQuery;
-  } else {
-    return $currDepQueryNode;
-  }
+	#the upper most node is not a subquery of course...
+	if ($recLevel == 0) {
+		cleanSelectToResembleQuery($sqlTreeCopy, $currOuterQuery);
+		return $currOuterQuery;
+	} else {
+		return $currDepQueryNode;
+	}
 }
 
 /**
@@ -446,67 +446,67 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
  * 
  */
 function cleanSelectToResembleQuery(&$initialQuery, &$newQuery) {
-  foreach($newQuery['SELECT'] as $key => $node) {
-   $tmp = explode('.', trim($node['alias'], "`"));
-   if (count($tmp) == 1) {
-     $colTable = false;
-     $colName = $tmp[0];
-   } else {
-     $colTable = $tmp[0];
-     $colName = $tmp[1];
-   }
+	foreach($newQuery['SELECT'] as $key => $node) {
+	 $tmp = explode('.', trim($node['alias'], "`"));
+	 if (count($tmp) == 1) {
+		 $colTable = false;
+		 $colName = $tmp[0];
+	 } else {
+		 $colTable = $tmp[0];
+		 $colName = $tmp[1];
+	 }
 
-   $found = false;
-   foreach($initialQuery['SELECT'] as $initNode) {
-     if($initNode['alias'] == $node['alias']) {
-      $found = true;
-      continue 2;
-    }
-  }
-  
+	 $found = false;
+	 foreach($initialQuery['SELECT'] as $initNode) {
+		 if($initNode['alias'] == $node['alias']) {
+			$found = true;
+			continue 2;
+		}
+	}
+	
 	//check if this column is needed in and ORDER BY or GROUP BY statement
-  if(array_key_exists('ORDER', $initialQuery)) {
-   foreach($initialQuery['ORDER'] as $initNode) {
-    if($initNode['base_expr'] == $node['base_expr']) {
-      $found = true;
-      continue 2;
-    } else {
-      $tmp2 = explode('.', trim($initNode['base_expr'], "`"));
-      if (count($tmp2) == 1) {
-       $colInitTable = false;
-       $colInitName = $tmp2[0];
-     } else {
-       $colInitTable = $tmp2[0];
-       $colInitName = $tmp2[1];
-     }
-     
-     if($colInitName == $colName) {
-       $found = true;
-       continue 2;
-     }
-   }
+	if(array_key_exists('ORDER', $initialQuery)) {
+	 foreach($initialQuery['ORDER'] as $initNode) {
+		if(strpos($initNode['base_expr'], $node['base_expr']) === 0) {
+			$found = true;
+			continue 2;
+		} else {
+			$tmp2 = explode('.', trim($initNode['base_expr'], "`"));
+			if (count($tmp2) == 1) {
+			 $colInitTable = false;
+			 $colInitName = $tmp2[0];
+		 } else {
+			 $colInitTable = $tmp2[0];
+			 $colInitName = $tmp2[1];
+		 }
+		 
+		 if($colInitName == $colName) {
+			 $found = true;
+			 continue 2;
+		 }
+	 }
  }
 }
 
 if(array_key_exists('GROUP', $initialQuery)) {
  foreach($initialQuery['GROUP'] as $initNode) {
-  if($initNode['base_expr'] == $node['base_expr']) {
-    $found = true;
-    continue 2;
-  } else {
-    $tmp2 = explode('.', trim($initNode['base_expr'], "`"));
-    if (count($tmp2) == 1) {
-     $colInitTable = false;
-     $colInitName = $tmp2[0];
-   } else {
-     $colInitTable = $tmp2[0];
-     $colInitName = $tmp2[1];
-   }
-   
-   if($colInitName == $colName) {
-     $found = true;
-     continue 2;
-   }
+	if($initNode['base_expr'] == $node['base_expr']) {
+		$found = true;
+		continue 2;
+	} else {
+		$tmp2 = explode('.', trim($initNode['base_expr'], "`"));
+		if (count($tmp2) == 1) {
+		 $colInitTable = false;
+		 $colInitName = $tmp2[0];
+	 } else {
+		 $colInitTable = $tmp2[0];
+		 $colInitName = $tmp2[1];
+	 }
+	 
+	 if($colInitName == $colName) {
+		 $found = true;
+		 continue 2;
+	 }
  }
 }
 }
@@ -533,60 +533,60 @@ if($found === false) {
  * 
  */
 function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $recLevel) {
-  array_push($currOuterQuery['FROM'], $currInnerNode);
+	array_push($currOuterQuery['FROM'], $currInnerNode);
 
-  foreach ($currInnerNode['sub_tree']['SELECT'] as $node) {
-    $tmp = false;
+	foreach ($currInnerNode['sub_tree']['SELECT'] as $node) {
+		$tmp = false;
 
-    #rewrite lower aggregate result into selectable column and add this to the SELECT clause
-    if ($node['expr_type'] != 'colref') {
-      #find the column participating in the aggregate
-      if (!empty($node['sub_tree'])) { #this is needed to handle order by NUMBERs!
-        foreach ($node['sub_tree'] as $agrPartNode) {
-          if ($agrPartNode['expr_type'] == 'colref') {
-            $tmp = explode('.', trim($agrPartNode['base_expr'], '()'));
-          }
-        }
-      }
+		#rewrite lower aggregate result into selectable column and add this to the SELECT clause
+		if ($node['expr_type'] != 'colref') {
+			#find the column participating in the aggregate
+			if (!empty($node['sub_tree'])) { #this is needed to handle order by NUMBERs!
+				foreach ($node['sub_tree'] as $agrPartNode) {
+					if ($agrPartNode['expr_type'] == 'colref') {
+						$tmp = explode('.', trim($agrPartNode['base_expr'], '()'));
+					}
+				}
+			}
 
-      //this expression is now to be treated as a normal column, so apply changes
-      $node['expr_type'] = 'colref';
-      $node['sub_tree'] = false;
-    } else {
-      $tmp = explode('.', $node['base_expr']);
-    }
+			//this expression is now to be treated as a normal column, so apply changes
+			$node['expr_type'] = 'colref';
+			$node['sub_tree'] = false;
+		} else {
+			$tmp = explode('.', $node['base_expr']);
+		}
 
-    if (count($tmp) > 1) {
-      $alias = $tmp[0];
-    } else {
-      $alias = false;
-    }
+		if (count($tmp) > 1) {
+			$alias = $tmp[0];
+		} else {
+			$alias = false;
+		}
 
-    #if this is a dependant query, properly form the aliased column name for retrieval...
-    if ($alias !== $tableList[$recLevel+1]['alias']) {
-      #check if this has already been aliased
-      if ($alias === $tmp[0] && strpos($tmp[0], 'agr_')) {
-        continue 1;
-      } else {
-        $node['base_expr'] = $alias . '.`' . trim($node['alias'], '`') . '`';
-      }
-    } 
+		#if this is a dependant query, properly form the aliased column name for retrieval...
+		if ($alias !== $tableList[$recLevel+1]['alias']) {
+			#check if this has already been aliased
+			if ($alias === $tmp[0] && strpos($tmp[0], 'agr_')) {
+				continue 1;
+			} else {
+				$node['base_expr'] = $alias . '.`' . trim($node['alias'], '`') . '`';
+			}
+		} 
 
-    if (!array_key_exists('where_col', $node) && !array_key_exists('order_clause', $node) && !array_key_exists('group_clause', $node)) {
-      array_push($currOuterQuery['SELECT'], $node);
-    }
-  }
+		if (!array_key_exists('where_col', $node) && !array_key_exists('order_clause', $node) && !array_key_exists('group_clause', $node)) {
+			array_push($currOuterQuery['SELECT'], $node);
+		}
+	}
 
-  //link order clause
-  if (array_key_exists('ORDER', $currInnerNode['sub_tree']) && count($currInnerNode['sub_tree']['ORDER']) > 0) {
-    if (!array_key_exists('ORDER', $currOuterQuery)) {
-      $currOuterQuery['ORDER'] = array();
-    }
+	//link order clause
+	if (array_key_exists('ORDER', $currInnerNode['sub_tree']) && count($currInnerNode['sub_tree']['ORDER']) > 0) {
+		if (!array_key_exists('ORDER', $currOuterQuery)) {
+			$currOuterQuery['ORDER'] = array();
+		}
 
-    foreach ($currInnerNode['sub_tree']['ORDER'] as $node) {
-      array_push($currOuterQuery['ORDER'], $node);
-    }
-  }
+		foreach ($currInnerNode['sub_tree']['ORDER'] as $node) {
+			array_push($currOuterQuery['ORDER'], $node);
+		}
+	}
 }
 
 
@@ -600,71 +600,71 @@ function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $
  * in MySQL plugins (see the mysql_udf folder for more information).
  */
 function PHPSQLaddAggregateTwoPassSubQuery(&$toThisNode) {
-    #loop through all SELECT parts to find an aggregate function that needs handling
-  $selectQuery = $toThisNode['SELECT'];
-  $fromQuery = $toThisNode['FROM'];
+		#loop through all SELECT parts to find an aggregate function that needs handling
+	$selectQuery = $toThisNode['SELECT'];
+	$fromQuery = $toThisNode['FROM'];
 
-  $currAgrParentNode = array();
-  $currAgrParentNode['table'] = 'DEPENDENT-SUBQUERY';
-  $currAgrParentNode['alias'] = '`agr_' . trim($fromQuery[0]['alias'], '`') . '`';
-  $currAgrParentNode['join_type'] = "JOIN";
-  $currAgrParentNode['ref_type'] = '';
-  $currAgrParentNode['ref_clause'] = '';
-  $currAgrParentNode['base_expr'] = '';
-  $currAgrParentNode['sub_tree'] = false;
+	$currAgrParentNode = array();
+	$currAgrParentNode['table'] = 'DEPENDENT-SUBQUERY';
+	$currAgrParentNode['alias'] = '`agr_' . trim($fromQuery[0]['alias'], '`') . '`';
+	$currAgrParentNode['join_type'] = "JOIN";
+	$currAgrParentNode['ref_type'] = '';
+	$currAgrParentNode['ref_clause'] = '';
+	$currAgrParentNode['base_expr'] = '';
+	$currAgrParentNode['sub_tree'] = false;
 
-  $currSubNode = array();
-  foreach ($selectQuery as $node) {
-   $nodeCpy = false;
+	$currSubNode = array();
+	foreach ($selectQuery as $node) {
+	 $nodeCpy = false;
 
-   if ($node['expr_type'] == 'expression') {
-	    #find the aggregate functions here
-     foreach ($node['sub_tree'] as $key => $subNode) {
-      if ($subNode['expr_type'] == 'aggregate_function') {
-		    #now determine if this is one we need to address with a two-pass algorithm
-        switch ($subNode['base_expr']) {
-         case 'STDDEV':
-         case 'STD':
-         case 'STDDEV_POP':
-         case 'STDDEV_SAMP':
-         case 'VARIANCE':
-         case 'VAR_POP':
-         case 'VAR_SAMP':
-         continue 2;
-         break;
-			    #WE HAVE FIXED PROBLEMS IN HERE WITH CUSTOM MADE UDFS. WE KEEP THIS FOR HISTORICAL REASONS
-			    #create the average query needed to complete the calculation
-         $nodeCpy = $node;
+	 if ($node['expr_type'] == 'expression') {
+			#find the aggregate functions here
+		 foreach ($node['sub_tree'] as $key => $subNode) {
+			if ($subNode['expr_type'] == 'aggregate_function') {
+				#now determine if this is one we need to address with a two-pass algorithm
+				switch ($subNode['base_expr']) {
+				 case 'STDDEV':
+				 case 'STD':
+				 case 'STDDEV_POP':
+				 case 'STDDEV_SAMP':
+				 case 'VARIANCE':
+				 case 'VAR_POP':
+				 case 'VAR_SAMP':
+				 continue 2;
+				 break;
+					#WE HAVE FIXED PROBLEMS IN HERE WITH CUSTOM MADE UDFS. WE KEEP THIS FOR HISTORICAL REASONS
+					#create the average query needed to complete the calculation
+				 $nodeCpy = $node;
 
-         $nodeCpy['sub_tree'][$key]['base_expr'] = "AVG";
-         $nodeCpy['alias'] = '`agr_' . trim($nodeCpy['alias'], '`') . '`';
-         $nodeCpy['base_expr'] = 'avg' . $nodeCpy['sub_tree'][$key + 1]['base_expr'];
+				 $nodeCpy['sub_tree'][$key]['base_expr'] = "AVG";
+				 $nodeCpy['alias'] = '`agr_' . trim($nodeCpy['alias'], '`') . '`';
+				 $nodeCpy['base_expr'] = 'avg' . $nodeCpy['sub_tree'][$key + 1]['base_expr'];
 
-         break;
+				 break;
 
-         default:
-         continue 2;
-         break;
-       }
+				 default:
+				 continue 2;
+				 break;
+			 }
 
-		    #add first pass to SELECT node
-       if (empty($currSubNode['SELECT'])) {
-         $currSubNode['SELECT'] = array();
-       }
+				#add first pass to SELECT node
+			 if (empty($currSubNode['SELECT'])) {
+				 $currSubNode['SELECT'] = array();
+			 }
 
-       array_push($currSubNode['SELECT'], $nodeCpy);
+			 array_push($currSubNode['SELECT'], $nodeCpy);
 
-		    #add this variable to the upper node
-		    #build select item
-       $newNode = array();
-       $newNode['alias'] = $nodeCpy['alias'];
-       $newNode['base_expr'] = $currAgrParentNode['alias'] . '.' . $nodeCpy['alias'];
-       $newNode['expr_type'] = 'colref';
-       $newNode['sub_tree'] = false;
+				#add this variable to the upper node
+				#build select item
+			 $newNode = array();
+			 $newNode['alias'] = $nodeCpy['alias'];
+			 $newNode['base_expr'] = $currAgrParentNode['alias'] . '.' . $nodeCpy['alias'];
+			 $newNode['expr_type'] = 'colref';
+			 $newNode['sub_tree'] = false;
 
-       array_push($toThisNode['SELECT'], $newNode);
-     }
-   }
+			 array_push($toThisNode['SELECT'], $newNode);
+		 }
+	 }
  }
 }
 
@@ -674,7 +674,7 @@ if (!empty($currSubNode['SELECT'])) {
 	return;
 }
 
-    #push down the group by argument:
+		#push down the group by argument:
 if (array_key_exists('GROUP', $toThisNode)) {
 	$currSubNode['GROUP'] = $toThisNode['GROUP'];
 
@@ -682,17 +682,17 @@ if (array_key_exists('GROUP', $toThisNode)) {
 
 	#gather the group_by selection columns from the SELECT and add to subnode
 	foreach ($toThisNode['SELECT'] as $node) {
-   if (array_key_exists('group_clause', $node)) {
-    unset($node['group_clause']);
+	 if (array_key_exists('group_clause', $node)) {
+		unset($node['group_clause']);
 
-    array_push($currSubNode['SELECT'], $node);
+		array_push($currSubNode['SELECT'], $node);
 
-    if ($joinCond != "") {
-      $joinCond .= " AND ";
-    }
+		if ($joinCond != "") {
+			$joinCond .= " AND ";
+		}
 
-    $joinCond .= $currAgrParentNode['alias'] . '.' . $node['alias'] . ' = ' . $node['alias'];
-  }
+		$joinCond .= $currAgrParentNode['alias'] . '.' . $node['alias'] . ' = ' . $node['alias'];
+	}
 }
 
 	#update join type
@@ -720,89 +720,89 @@ array_push($toThisNode['FROM'], $currAgrParentNode);
  * recLevel.
  */
 function PHPSQLresortCondTableList(&$tableList, &$dependantWheres, &$recLevel) {
-    #build a list of all possible remaining combinations and count dependant queries
-    #is there still something remaining??
-  if ($recLevel == 0) {
-   return;
+		#build a list of all possible remaining combinations and count dependant queries
+		#is there still something remaining??
+	if ($recLevel == 0) {
+	 return;
  }
 
-    #generate a list of a possible combination that will be passed on to the tree
-    #walker that will count the number of dependand where clases addressable with the
-    #given test combination - the ones above $recLevel will always remain the same,
-    #only the first entry will change:
+		#generate a list of a possible combination that will be passed on to the tree
+		#walker that will count the number of dependand where clases addressable with the
+		#given test combination - the ones above $recLevel will always remain the same,
+		#only the first entry will change:
  $possibleComb = array();
  $possibleComb[0] = -1;
 
-    #add the tables that have already been processed to the current test combination 
-    #these will allways remain the same
+		#add the tables that have already been processed to the current test combination 
+		#these will allways remain the same
  $count = 0;
  foreach ($tableList as $key => $table) {
-   if ($key >= $recLevel) {
-     $count++;
-     $possibleComb[$count] = $key;
-   }
+	 if ($key >= $recLevel) {
+		 $count++;
+		 $possibleComb[$count] = $key;
+	 }
  }
 
  $combCountList = array();
  $combPartList = array();
  foreach ($tableList as $key => $table) {
 	#skip the ones we already processed
-   if ($key >= $recLevel) {
-     continue;
-   }
+	 if ($key >= $recLevel) {
+		 continue;
+	 }
 
-   $possibleComb[0] = $key;
+	 $possibleComb[0] = $key;
 
-   $combPartList[$key] = PHPSQLgetDepWhereConds($tableList, $dependantWheres, $possibleComb);
-   $combCountList[$key] = count($combPartList[$key]);
+	 $combPartList[$key] = PHPSQLgetDepWhereConds($tableList, $dependantWheres, $possibleComb);
+	 $combCountList[$key] = count($combPartList[$key]);
  }
 
-    #now choose the one to take
+		#now choose the one to take
  $maxKey = -1;
  $maxCount = -1;
  foreach ($combCountList as $key => $value) {
-   if ($value >= $maxCount) {
-     $maxCount = $value;
-     $maxKey = $key;
-   }
+	 if ($value >= $maxCount) {
+		 $maxCount = $value;
+		 $maxKey = $key;
+	 }
  }
 
-    #add the dependant queries to the table and remove from the dependant list
+		#add the dependant queries to the table and remove from the dependant list
  if (!array_key_exists('where_cond', $tableList[$maxKey])) {
-   $tableList[$maxKey]['where_cond'] = array();
+	 $tableList[$maxKey]['where_cond'] = array();
  }
 
  $tableList[$maxKey]['where_cond'] = array_merge($tableList[$maxKey]['where_cond'], $combPartList[$maxKey]);
  foreach ($combPartList[$maxKey] as $node) {
-   $key = array_search($node, $dependantWheres);
-   unset($dependantWheres[$key]);
+	 $key = array_search($node, $dependantWheres);
+	 unset($dependantWheres[$key]);
  }
 
-    #add the columns that make up the dependant wheres to the table
+		#add the columns that make up the dependant wheres to the table
  foreach ($combPartList[$maxKey] as $node) {
-   $listOfParticipants = PHPSQLGetListOfParticipants($node);
+	 $listOfParticipants = PHPSQLGetListOfParticipants($node);
 
 	#check which one we still need to add to the list of columns
-   foreach ($listOfParticipants as $col) {
-     $tmp = explode('.', $col['base_expr']);
+	 foreach ($listOfParticipants as $col) {
+		 $tmp = explode('.', $col['base_expr']);
 
-     if ($tmp[0] == $tableList[$maxKey]['alias']) {
-      $tmpCol['expr_type'] = $col['expr_type'];
-      $tmpCol['alias'] = '`' . $col['base_expr'] . '`';
-      $tmpCol['base_expr'] = $col['base_expr'];
-      $tmpCol['sub_tree'] = $col['sub_tree'];
+		 if ($tmp[0] == $tableList[$maxKey]['alias']) {
+			$tmpCol['expr_type'] = $col['expr_type'];
+			$tmpCol['alias'] = '`' . $col['base_expr'] . '`';
+			$tmpCol['base_expr'] = $col['base_expr'];
+			$tmpCol['sub_tree'] = $col['sub_tree'];
 
-      $col['sub_tree'] = false;
-      $key = array_search($tmpCol, $tableList[$maxKey]['sel_columns']);
+			$col['sub_tree'] = false;
+			$key = array_search($tmpCol, $tableList[$maxKey]['sel_columns']);
 
-      if ($key === false) {
-        array_push($tableList[$maxKey]['sel_columns'], $col);
-      }
-    }
-  }
+			if ($key === false) {
+				array_push($tableList[$maxKey]['sel_columns'], $col);
+			}
+		}
+	}
 }
 
-    #exchange the two tables
+		#exchange the two tables
 if ($maxKey != $recLevel - 1) {
 	$tmp = $tableList[$recLevel - 1];
 	$tableList[$recLevel - 1] = $tableList[$maxKey];
@@ -823,30 +823,30 @@ if ($maxKey != $recLevel - 1) {
  * that match as an array.
  */
 function PHPSQLgetDepWhereConds($tableList, $dependantWheres, $possibleCombList) {
-  $outArray = array();
+	$outArray = array();
 
-  if (empty($dependantWheres)) {
-   return $outArray;
+	if (empty($dependantWheres)) {
+	 return $outArray;
  }
 
  foreach ($dependantWheres as $node) {
-   $listOfParticipants = PHPSQLGetListOfParticipants($node);
+	 $listOfParticipants = PHPSQLGetListOfParticipants($node);
 
-   $count = 0;
-   foreach ($listOfParticipants as $part) {
-     $currTable = explode(".", $part['base_expr']);
-     $currTable = $currTable[0];
+	 $count = 0;
+	 foreach ($listOfParticipants as $part) {
+		 $currTable = explode(".", $part['base_expr']);
+		 $currTable = $currTable[0];
 
-     foreach ($possibleCombList as $key) {
-      if ($tableList[$key]['alias'] == $currTable) {
-        $count++;
-        break;
-      }
-    }
-  }
+		 foreach ($possibleCombList as $key) {
+			if ($tableList[$key]['alias'] == $currTable) {
+				$count++;
+				break;
+			}
+		}
+	}
 
-  if ($count == count($listOfParticipants)) {
-   array_push($outArray, $node);
+	if ($count == count($listOfParticipants)) {
+	 array_push($outArray, $node);
  }
 }
 
@@ -862,39 +862,39 @@ return $outArray;
  * Takes the HAVING clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryHaving(&$sqlTree, &$table, &$toThisNode) {
-    #only apply the having clause, if all colrefs in here link to the current table. otherwise throw error
+		#only apply the having clause, if all colrefs in here link to the current table. otherwise throw error
 
-  $tblAlias = $table['alias'];
-  $tmp = explode('.', $table['name']);
-  if (count($tmp) == 1) {
-   $tblDb = false;
-   $tblName = $tmp[0];
+	$tblAlias = $table['alias'];
+	$tmp = explode('.', $table['name']);
+	if (count($tmp) == 1) {
+	 $tblDb = false;
+	 $tblName = $tmp[0];
  } else {
-   $tblDb = $tmp[0];
-   $tblName = $tmp[1];
+	 $tblDb = $tmp[0];
+	 $tblName = $tmp[1];
  }
 
  if (!array_key_exists('HAVING', $sqlTree)) {
-   return;
+	 return;
  }
 
  $countColrefs = 0;
  $countThisColrefs = 0;
  foreach ($sqlTree['HAVING'] as $node) {
-   if ($node['expr_type'] == 'colref') {
-     $tmp = explode('.', $node['base_expr']);
-     if ($tmp[0] == $tblAlias || $tmp[0] == $tblName) {
-      $countThisColrefs++;
-    }
+	 if ($node['expr_type'] == 'colref') {
+		 $tmp = explode('.', $node['base_expr']);
+		 if ($tmp[0] == $tblAlias || $tmp[0] == $tblName) {
+			$countThisColrefs++;
+		}
 
-    $countColrefs++;
-  }
+		$countColrefs++;
+	}
 }
 
 if ($countColrefs == $countThisColrefs) {
 	#construct the HAVING part
 	if (!array_key_exists('HAVING', $toThisNode)) {
-   $toThisNode['HAVING'] = array();
+	 $toThisNode['HAVING'] = array();
  }
 
  $toThisNode['HAVING'] = $sqlTree['HAVING'];
@@ -914,20 +914,20 @@ if ($countColrefs == $countThisColrefs) {
  * Takes the LIMIT clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryLimit(&$sqlTree, &$table, &$toThisNode, $recLevel) {
-    #only apply the limit clause
+		#only apply the limit clause
 
-  if (!array_key_exists('LIMIT', $sqlTree) || $recLevel > 0) {
-    return;
-  }
+	if (!array_key_exists('LIMIT', $sqlTree) || $recLevel > 0) {
+		return;
+	}
 
-  #construct the LIMIT part
-  if (!array_key_exists('LIMIT', $toThisNode)) {
-    $toThisNode['LIMIT'] = array();
-  }
+	#construct the LIMIT part
+	if (!array_key_exists('LIMIT', $toThisNode)) {
+		$toThisNode['LIMIT'] = array();
+	}
 
-  $toThisNode['LIMIT'] = $sqlTree['LIMIT'];
+	$toThisNode['LIMIT'] = $sqlTree['LIMIT'];
 
-  unset($sqlTree['LIMIT']);
+	unset($sqlTree['LIMIT']);
 }
 
 /**
@@ -939,18 +939,18 @@ function PHPSQLaddOuterQueryLimit(&$sqlTree, &$table, &$toThisNode, $recLevel) {
  * Takes the INDEX clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryIndex(&$sqlTree, &$table, &$toThisNode) {
-    #only apply the limit clause
+		#only apply the limit clause
 
-  if (!array_key_exists('USE INDEX', $sqlTree) && !array_key_exists('IGNORE INDEX', $sqlTree)) {
-   return;
+	if (!array_key_exists('USE INDEX', $sqlTree) && !array_key_exists('IGNORE INDEX', $sqlTree)) {
+	 return;
  }
 
  if (array_key_exists('USE INDEX', $sqlTree)) {
-   $toThisNode['USE INDEX'] = $sqlTree['USE INDEX'];
+	 $toThisNode['USE INDEX'] = $sqlTree['USE INDEX'];
  }
 
  if (array_key_exists('IGNORE INDEX', $sqlTree)) {
-   $toThisNode['IGNORE INDEX'] = $sqlTree['IGNORE INDEX'];
+	 $toThisNode['IGNORE INDEX'] = $sqlTree['IGNORE INDEX'];
  }
 }
 
@@ -963,15 +963,15 @@ function PHPSQLaddOuterQueryIndex(&$sqlTree, &$table, &$toThisNode) {
  * Takes the OPTIONS clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryOptions(&$sqlTree, &$table, &$toThisNode) {
-    #only apply the limit clause
+		#only apply the limit clause
 
-  if (!array_key_exists('OPTIONS', $sqlTree)) {
-   return;
+	if (!array_key_exists('OPTIONS', $sqlTree)) {
+	 return;
  }
 
-    #construct the HAVING part
+		#construct the HAVING part
  if (!array_key_exists('OPTIONS', $toThisNode)) {
-   $toThisNode['OPTIONS'] = array();
+	 $toThisNode['OPTIONS'] = array();
  }
 
  $toThisNode['OPTIONS'] = $sqlTree['OPTIONS'];
@@ -990,93 +990,93 @@ function PHPSQLaddOuterQueryOptions(&$sqlTree, &$table, &$toThisNode) {
  * Basically this just adds `s around the table names (OK it does slightly more...).
  */
 function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
-  $new_base_expr = "";
+	$new_base_expr = "";
 
-  $listOfCols = array();
-  if ($toThisNode !== false) {
-    foreach ($toThisNode['sub_tree']['SELECT'] as $selNode) {
-      array_push($listOfCols, $selNode);
-    }
-  }
+	$listOfCols = array();
+	if ($toThisNode !== false) {
+		foreach ($toThisNode['sub_tree']['SELECT'] as $selNode) {
+			array_push($listOfCols, $selNode);
+		}
+	}
 
-  #rewrite node to properly alias involved columns
-  if ($node['sub_tree'] !== false && $node['expr_type'] != "subquery") {
-    foreach ($node['sub_tree'] as &$subnode) {
-      if ($subnode['sub_tree'] !== false) {
-        PHPSQLrewriteAliasWhere($subnode, $tableList, $recLevel, $toThisNode);
-      }
+	#rewrite node to properly alias involved columns
+	if ($node['sub_tree'] !== false && $node['expr_type'] != "subquery") {
+		foreach ($node['sub_tree'] as &$subnode) {
+			if ($subnode['sub_tree'] !== false) {
+				PHPSQLrewriteAliasWhere($subnode, $tableList, $recLevel, $toThisNode);
+			}
 
-      if ($subnode['expr_type'] == 'colref') {
-        $tmp = explode('.', $subnode['base_expr']);
-        if (count($tmp) < 1) {
-          $currTable = false;
-          $currCol = $tmp[0];
-        } else {
-          $currTable = $tmp[0];
-          $currCol = implode(".", array_slice($tmp, 1));
-        }
+			if ($subnode['expr_type'] == 'colref') {
+				$tmp = explode('.', $subnode['base_expr']);
+				if (count($tmp) < 1) {
+					$currTable = false;
+					$currCol = $tmp[0];
+				} else {
+					$currTable = $tmp[0];
+					$currCol = implode(".", array_slice($tmp, 1));
+				}
 
-        if ($currTable !== false) {
-		      #search for the table in the tablelist
-          foreach ($tableList as $tblKey => $currTbl) {
-            if ($currTbl['alias'] == $currTable) {
-              break;
-            }
-          }
+				if ($currTable !== false) {
+					#search for the table in the tablelist
+					foreach ($tableList as $tblKey => $currTbl) {
+						if ($currTbl['alias'] == $currTable) {
+							break;
+						}
+					}
 
-          if ($tblKey > $recLevel) {
-      			#rewrite name of where_node to properly alias it
-      			#rewrite name to alias name if needed
-            foreach ($listOfCols as $selNode) {
-              if (trim($selNode['base_expr'], ' ') == $currCol) {
-                $tmp = explode(".", trim($selNode['alias'], '`'));
-                if (count($tmp) > 1) {
-  				        #search for proper name in the subquery tree
-                  foreach ($toThisNode['sub_tree']['FROM'] as $subTreeNode) {
-                    if ($subTreeNode['alias'] == $currTable) {
-                      #now that the subtree is found, loop through the selects and find the 
-                      #node we are looking for
-                      #is this the lowest node? then there is no sub_tree to be found, handle things differntly
-                      if ($subTreeNode['sub_tree'] !== false) {
-                        $parseThisNode = $subTreeNode['sub_tree']['SELECT'];
-                      } else {
-                        $parseThisNode = $toThisNode['sub_tree']['SELECT'];
-                      }
+					if ($tblKey > $recLevel) {
+						#rewrite name of where_node to properly alias it
+						#rewrite name to alias name if needed
+						foreach ($listOfCols as $selNode) {
+							if (trim($selNode['base_expr'], ' ') == $currCol) {
+								$tmp = explode(".", trim($selNode['alias'], '`'));
+								if (count($tmp) > 1) {
+									#search for proper name in the subquery tree
+									foreach ($toThisNode['sub_tree']['FROM'] as $subTreeNode) {
+										if ($subTreeNode['alias'] == $currTable) {
+											#now that the subtree is found, loop through the selects and find the 
+											#node we are looking for
+											#is this the lowest node? then there is no sub_tree to be found, handle things differntly
+											if ($subTreeNode['sub_tree'] !== false) {
+												$parseThisNode = $subTreeNode['sub_tree']['SELECT'];
+											} else {
+												$parseThisNode = $toThisNode['sub_tree']['SELECT'];
+											}
 
-                      foreach ($parseThisNode as $selectNodes) {
-                        $selTmp = explode(".", $selectNodes['base_expr']);
-                        if (count($selTmp) > 1) {
-                          $selColName = trim($selTmp[1]);
-                        } else {
-                          $selColName = trim($selTmp[0]);
-                        }
+											foreach ($parseThisNode as $selectNodes) {
+												$selTmp = explode(".", $selectNodes['base_expr']);
+												if (count($selTmp) > 1) {
+													$selColName = trim($selTmp[1]);
+												} else {
+													$selColName = trim($selTmp[0]);
+												}
 
-                        if ($selColName === $tmp[1]) {
-                          $tmp[0] = $selectNodes['alias'];
-                          break;
-                        }
-                      }
-                      break;
-                    }
-                  }
-                }
+												if ($selColName === $tmp[1]) {
+													$tmp[0] = $selectNodes['alias'];
+													break;
+												}
+											}
+											break;
+										}
+									}
+								}
 
-                $subnode['base_expr'] = trim($tmp[0], "`");
+								$subnode['base_expr'] = trim($tmp[0], "`");
 
-                break;
-              }
-            }
+								break;
+							}
+						}
 
-            $subnode['base_expr'] = '`' . trim($tableList[$tblKey]['alias'], "`") . '`.`' . $subnode['base_expr'] . '`';
-          }
-        }
-      }
+						$subnode['base_expr'] = '`' . trim($tableList[$tblKey]['alias'], "`") . '`.`' . $subnode['base_expr'] . '`';
+					}
+				}
+			}
 
-      $new_base_expr .= " " . $subnode['base_expr'];
-    }
+			$new_base_expr .= " " . $subnode['base_expr'];
+		}
 
-    $node['base_expr'] = "( " . $new_base_expr . " )";
-  }
+		$node['base_expr'] = "( " . $new_base_expr . " )";
+	}
 }
 
 /**
@@ -1091,43 +1091,43 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
  * Takes the WHERE clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, $recLevel, &$currInnerNode) {
-  if (empty($table['where_cond'])) {
-    return;
-  }
+	if (empty($table['where_cond'])) {
+		return;
+	}
 
-  #construct the WHERE part
-  if (!array_key_exists('WHERE', $toThisNode)) {
-    $toThisNode['WHERE'] = array();
-  }
+	#construct the WHERE part
+	if (!array_key_exists('WHERE', $toThisNode)) {
+		$toThisNode['WHERE'] = array();
+	}
 
-  #add the stuff in the where_cond to the query and remove from the complete tree
-  foreach ($table['where_cond'] as $key => $node) {
-    PHPSQLrewriteAliasWhere($node, $tableList, $recLevel, $currInnerNode);
+	#add the stuff in the where_cond to the query and remove from the complete tree
+	foreach ($table['where_cond'] as $key => $node) {
+		PHPSQLrewriteAliasWhere($node, $tableList, $recLevel, $currInnerNode);
 
-    #generate an AND node if needed
-    if(array_key_exists('oldKey', $node)) {
-      if($node['oldKey'] == 0)
-        $oldKey = 0;
-      else
-        $oldKey = $node['oldKey'] - 1;
-    } else {
-      $oldKey = false;
-    }
+		#generate an AND node if needed
+		if(array_key_exists('oldKey', $node)) {
+			if($node['oldKey'] == 0)
+				$oldKey = 0;
+			else
+				$oldKey = $node['oldKey'] - 1;
+		} else {
+			$oldKey = false;
+		}
 
-    $operatorNode = false;
-    if (array_key_exists('operator', $node)) {
-      $operatorNode = $node['operator'];
-    } else if ($node['expr_type'] == "operator" && $key == count($table['where_cond']) - 1) {
-      continue;
-    } else if ($node['expr_type'] == "operator" && $node['base_expr'] == 'and') {
-      continue;
-    }
+		$operatorNode = false;
+		if (array_key_exists('operator', $node)) {
+			$operatorNode = $node['operator'];
+		} else if ($node['expr_type'] == "operator" && $key == count($table['where_cond']) - 1) {
+			continue;
+		} else if ($node['expr_type'] == "operator" && $node['base_expr'] == 'and') {
+			continue;
+		}
 
-    if($operatorNode !== false) {
-      array_push($toThisNode['WHERE'], $operatorNode);
-    }
-    array_push($toThisNode['WHERE'], $node);
-  }
+		if($operatorNode !== false) {
+			array_push($toThisNode['WHERE'], $operatorNode);
+		}
+		array_push($toThisNode['WHERE'], $node);
+	}
 }
 
 /**
@@ -1137,102 +1137,122 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
  * @param toThisNode the node where the ORDER clause is added to
  * @param tableList the sorted table list
  * @param recLevel current recursion level
-  * 
+	* 
  * Takes the ORDER clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList, $recLevel) {
-  $tblAlias = $table['alias'];
-  $tmp = explode('.', $table['name']);
-  if (count($tmp) == 1) {
-   $tblDb = false;
-   $tblName = $tmp[0];
- } else {
-   $tblDb = $tmp[0];
-   $tblName = $tmp[1];
- }
+	$tblAlias = $table['alias'];
+	$tmp = explode('.', $table['name']);
+	if (count($tmp) == 1) {
+		$tblDb = false;
+		$tblName = $tmp[0];
+	} else {
+		$tblDb = $tmp[0];
+		$tblName = $tmp[1];
+	}
 
- if (!array_key_exists('ORDER', $sqlTree)) {
-   return;
- }
+	if (!array_key_exists('ORDER', $sqlTree)) {
+		return;
+	}
 
-    #construct the ORDER part
- if (!array_key_exists('ORDER', $toThisNode)) {
-   $toThisNode['ORDER'] = array();
- }
+	#construct the ORDER part
+	if (!array_key_exists('ORDER', $toThisNode)) {
+		$toThisNode['ORDER'] = array();
+	}
 
- foreach ($sqlTree['ORDER'] as $count => $node) {
-   //fix some stupidity by the parser. we could fix the parser as well, but let's do it here
-   $node['base_expr'] = str_replace("ASC", "", $node['base_expr']);
-   $node['base_expr'] = str_replace("DESC", "", $node['base_expr']);
-   $node['base_expr'] = trim($node['base_expr']);
+	foreach ($sqlTree['ORDER'] as $count => $node) {
+		//fix some stupidity by the parser. we could fix the parser as well, but let's do it here
+		$node['base_expr'] = str_replace("ASC", "", $node['base_expr']);
+		$node['base_expr'] = str_replace("DESC", "", $node['base_expr']);
+		$node['base_expr'] = trim($node['base_expr']);
 
-   #parse the group by (since the parser somehow messes up)
-   $phpParse = new PHPSQLParserOld();
-   $parsed = array();
-   $parsed[0] = $phpParse->process_select_expr($node['base_expr']);
+		#parse the group by (since the parser somehow messes up)
+		$phpParse = new PHPSQLParserOld();
+		$parsed = array();
+		$parsed[0] = $phpParse->process_select_expr($node['base_expr']);
 
-   $tmpArray = array();
-   $countDep = PHPSQLcollectColumns($parsed, $tblDb, $tblName, trim($tblAlias, '`'), $tmpArray, $tableList, $recLevel);
+		$tmpArray = array();
+		$countDep = PHPSQLcollectColumns($parsed, $tblDb, $tblName, trim($tblAlias, '`'), $tmpArray, $tableList, $recLevel);
 
-   if ($countDep == 0) {
-     $node['expr_type'] = $parsed[0]['expr_type'];
+		if ($countDep == 0) {
+			$node['expr_type'] = $parsed[0]['expr_type'];
 
-	   #it might be, that this column has been aliased, so take care of that
-     $find = false;
-     foreach ($toThisNode['SELECT'] as $selNode) {
-      if (trim($selNode['base_expr'], ' ') == $parsed[0]['base_expr']) {
-        $node['alias'] = $selNode['alias'];
-        $find = true;
-        break;
-      }
-    }
+			#it might be, that this column has been aliased, so take care of that
+			$find = false;
+			foreach ($toThisNode['SELECT'] as $selNode) {
+				if (trim($selNode['base_expr'], ' ') == $parsed[0]['base_expr'] ||
+							 trim($selNode['alias']) == trim($node['base_expr'])) {
+					$node['alias'] = $selNode['alias'];
+					$find = true;
+					break;
+				}
+			}
 
-    if ($find === false) {
-      $node['alias'] = $parsed[0]['alias'];
-    }
+			if ($find === false) {
+				$node['alias'] = $parsed[0]['alias'];
+			}
 
-	    #check if this column already exists in the select tree
-    $findNode = false;
-    foreach ($toThisNode['SELECT'] as $selNode) {
-      if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ') ||
-          trim($selNode['alias']) == trim($node['base_expr'])) {
-        $findNode = $selNode;
-		    #$selNode['order_clause'] = $node;
-        break;
-      }
-    }
+			#check if this column already exists in the select tree
+			$findNode = false;
+			foreach ($toThisNode['SELECT'] as $selNode) {
+				if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ') ||
+						trim($selNode['alias']) == trim($node['base_expr'])) {
+					$findNode = $selNode;
+					#$selNode['order_clause'] = $node;
+					break;
+				}
+			}
 
-    if ($findNode === false) {
-      $tmp = explode(".", $node['base_expr']);
-		#this handles a special case, where DBName.Table name comes up. We need to exclude this
-      $tmpTblAlias = explode(".", $tblAlias);
+			if ($findNode === false) {
+				$tmp = explode(".", $node['base_expr']);
+				#this handles a special case, where DBName.Table name comes up. We need to exclude this
+				$tmpTblAlias = explode(".", $tblAlias);
 
-		#check on recLevel because unaliased order bys apply to top level table (and sql parser decides which one to take)
-      if (count($tmpTblAlias) == 1 && count($tmp) == 1 && !is_numeric($node['base_expr']) && $recLevel == 0) {
-        $node['base_expr'] = $tblAlias . "." . $node['base_expr'];
-        $node['alias'] = "`" . $tblAlias . "." . trim($node['alias'], "`") . "`";
-        $parsed[0]['base_expr'] = $node['base_expr'];
-        $parsed[0]['alias'] = $node['alias'];
-      }
+				#check on recLevel because unaliased order bys apply to top level table (and sql parser decides which one to take)
+				if (count($tmpTblAlias) == 1 && count($tmp) == 1 && !is_numeric($node['base_expr']) && $recLevel == 0) {
+					$node['base_expr'] = $tblAlias . "." . $node['base_expr'];
+					$node['alias'] = "`" . $tblAlias . "." . trim($node['alias'], "`") . "`";
+					$parsed[0]['base_expr'] = $node['base_expr'];
+					$parsed[0]['alias'] = $node['alias'];
+				} else if (trim($tmp[0], "` ") == $tblDb || trim($tmp[0], "` ") == $tblAlias) {
+					$parsed[0]['order_clause'] = $node;
+					array_push($toThisNode['SELECT'], $parsed[0]);
+				} else {
+					$findNode = true;
+					//check if this column applies to the current table that is beeing processed
+					foreach($sqlTree['SELECT'] as $selNode) {
+						if(trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ') ||
+							 trim($selNode['alias']) == trim($node['base_expr'])) {
 
-      $parsed[0]['order_clause'] = $node;
+							$tmp1 = explode(".", $selNode['base_expr']);
 
-      array_push($toThisNode['SELECT'], $parsed[0]);
-    }
+							if(count($tmp1) > 1 && (trim($tmp1[0], "` ") == $tblDb || trim($tmp1[0], "` ") == $tblAlias)) {
+								$parsed[0]['order_clause'] = $node;
+								array_push($toThisNode['SELECT'], $parsed[0]);
+								$findNode = false;
+							}
 
-    array_push($toThisNode['ORDER'], $node);
+							break;
+						}
+					}
+				}
+			}
 
-    unset($sqlTree['ORDER'][$count]);
-  }
-}
+			if($findNode !== true) {
+				array_push($toThisNode['ORDER'], $node);
 
-if (empty($sqlTree['ORDER'])) {
-	unset($sqlTree['ORDER']);
-}
+				unset($sqlTree['ORDER'][$count]);
+			}
+		}
+	}
 
-if (empty($toThisNode['ORDER'])) {
-	unset($toThisNode['ORDER']);
-}
+	if (empty($sqlTree['ORDER'])) {
+		unset($sqlTree['ORDER']);
+	}
+
+	if (empty($toThisNode['ORDER'])) {
+		unset($toThisNode['ORDER']);
+	}
 }
 
 /**
@@ -1242,62 +1262,62 @@ if (empty($toThisNode['ORDER'])) {
  * @param toThisNode the node where the GROUP clause is added to
  * @param tableList the sorted table list
  * @param recLevel current recursion level
-  * 
+	* 
  * Takes the GROUP clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryGroup(&$sqlTree, &$table, &$toThisNode, &$tableList, $recLevel) {
-  $tblAlias = $table['alias'];
-  $tmp = explode('.', $table['name']);
-  if (count($tmp) == 1) {
-   $tblDb = false;
-   $tblName = $tmp[0];
+	$tblAlias = $table['alias'];
+	$tmp = explode('.', $table['name']);
+	if (count($tmp) == 1) {
+	 $tblDb = false;
+	 $tblName = $tmp[0];
  } else {
-   $tblDb = $tmp[0];
-   $tblName = $tmp[1];
+	 $tblDb = $tmp[0];
+	 $tblName = $tmp[1];
  }
 
  if (!array_key_exists('GROUP', $sqlTree)) {
-   return;
+	 return;
  }
 
-    #construct the GROUP part
+		#construct the GROUP part
  if (!array_key_exists('GROUP', $toThisNode)) {
-   $toThisNode['GROUP'] = array();
+	 $toThisNode['GROUP'] = array();
  }
 
  foreach ($sqlTree['GROUP'] as $count => $node) {
 	#parse the group by (since the parser somehow messes up)
-   $phpParse = new PHPSQLParserOld();
-   $parsed = array();
-   $parsed[0] = $phpParse->process_select_expr($node['base_expr']);
+	 $phpParse = new PHPSQLParserOld();
+	 $parsed = array();
+	 $parsed[0] = $phpParse->process_select_expr($node['base_expr']);
 
-   $tmpArray = array();
-   $countDep = PHPSQLcollectColumns($parsed, $tblDb, $tblName, trim($tblAlias, '`'), $tmpArray, $tableList, $recLevel);
+	 $tmpArray = array();
+	 $countDep = PHPSQLcollectColumns($parsed, $tblDb, $tblName, trim($tblAlias, '`'), $tmpArray, $tableList, $recLevel);
 
-   if ($countDep == 0) {
-     $node['expr_type'] = $parsed[0]['expr_type'];
-     $node['alias'] = $parsed[0]['alias'];
+	 if ($countDep == 0) {
+		 $node['expr_type'] = $parsed[0]['expr_type'];
+		 $node['alias'] = $parsed[0]['alias'];
 
-     array_push($toThisNode['GROUP'], $node);
+		 array_push($toThisNode['GROUP'], $node);
 
-	    #check if this column already exists in the select tree
-     $findNode = false;
-     foreach ($toThisNode['SELECT'] as &$selNode) {
-      if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ') ||
-          trim($selNode['alias']) == trim($node['base_expr'])) {
-        $findNode = $selNode;
-		    #$selNode['order_clause'] = $node;
-        break;
-      }
-    }
+			#check if this column already exists in the select tree
+		 $findNode = false;
+		 foreach ($toThisNode['SELECT'] as &$selNode) {
+			if (trim($selNode['base_expr'], ' ') == trim($node['base_expr'], ' ') ||
+					trim($selNode['alias']) == trim($node['base_expr'])) {
+				$findNode = $selNode;
+				#$selNode['order_clause'] = $node;
+				break;
+			}
+		}
 
-    if ($findNode === false) {
-      $parsed[0]['group_clause'] = $node;
-      array_push($toThisNode['SELECT'], $parsed[0]);
-    }
+		if ($findNode === false) {
+			$parsed[0]['group_clause'] = $node;
+			array_push($toThisNode['SELECT'], $parsed[0]);
+		}
 
-    unset($sqlTree['GROUP'][$count]);
-  }
+		unset($sqlTree['GROUP'][$count]);
+	}
 }
 
 if (empty($sqlTree['GROUP'])) {
@@ -1314,12 +1334,12 @@ if (empty($toThisNode['GROUP'])) {
  * @param sqlTree the SQL tree which is rewritten
  * @param table currently treated table
  * @param toThisNode the node where the UPDATE clause is added to
-  * 
+	* 
  * Takes the UPDATE clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryUpdate(&$sqlTree, &$table, &$toThisNode) {
-  if (array_key_exists('UPDATE', $sqlTree)) {
-   throw new RuntimeException('Update statement: Not yet handled');
+	if (array_key_exists('UPDATE', $sqlTree)) {
+	 throw new RuntimeException('Update statement: Not yet handled');
  }
 }
 
@@ -1334,85 +1354,85 @@ function PHPSQLaddOuterQueryUpdate(&$sqlTree, &$table, &$toThisNode) {
  * Takes the FROM clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQueryFrom(&$sqlTree, &$table, &$toThisNode, $tableList, $recLevel) {
-  $tblAlias = $table['alias'];
-  $tmp = explode('.', $table['name']);
-  if (count($tmp) == 1) {
-    $tblDb = false;
-    $tblName = $tmp[0];
-  } else {
-    $tblDb = $tmp[0];
-    $tblName = $tmp[1];
-  }
+	$tblAlias = $table['alias'];
+	$tmp = explode('.', $table['name']);
+	if (count($tmp) == 1) {
+		$tblDb = false;
+		$tblName = $tmp[0];
+	} else {
+		$tblDb = $tmp[0];
+		$tblName = $tmp[1];
+	}
 
-  if (!array_key_exists('FROM', $sqlTree)) {
-    return;
-  }
+	if (!array_key_exists('FROM', $sqlTree)) {
+		return;
+	}
 
-  #construct the FROM part
-  if (!array_key_exists('FROM', $toThisNode)) {
-    $toThisNode['FROM'] = array();
-  }
+	#construct the FROM part
+	if (!array_key_exists('FROM', $toThisNode)) {
+		$toThisNode['FROM'] = array();
+	}
 
-  foreach ($sqlTree['FROM'] as $key => $node) {
-    $tmp = explode('.', $node['table']);
+	foreach ($sqlTree['FROM'] as $key => $node) {
+		$tmp = explode('.', $node['table']);
 
-    if (count($tmp) == 1) {
-      $currDb = false;
-      $currTable = $tmp[0];
-    } else {
-      $currDb = $tmp[0];
-      $currTable = $tmp[1];
-    }
+		if (count($tmp) == 1) {
+			$currDb = false;
+			$currTable = $tmp[0];
+		} else {
+			$currDb = $tmp[0];
+			$currTable = $tmp[1];
+		}
 
-    #check if this is the right table
-    if ($node['alias'] == $tblAlias || (empty($node['alias']) && ($currTable == $tblAlias  || ($currTable == $tblName && $currDb == $tblDb)))) {
-      #create a copy of this node
-      $nodeCopy = $node;
+		#check if this is the right table
+		if ($node['alias'] == $tblAlias || (empty($node['alias']) && ($currTable == $tblAlias  || ($currTable == $tblName && $currDb == $tblDb)))) {
+			#create a copy of this node
+			$nodeCopy = $node;
 
-      #is there a USING flag?
-      if ($nodeCopy['ref_type'] == 'USING' || $nodeCopy['ref_type'] == 'ON') {
-        #check if this column part of the select clause
-        $found = 0;
-        foreach ($toThisNode['SELECT'] as $selNode) {
-          $tmp = explode('.', $selNode['base_expr']);
-          if ($nodeCopy['ref_clause'] == $tmp[0] || $nodeCopy['ref_clause'] == $tmp[1]) {
-            $found = 1;
-            break;
-          }
-        }
+			#is there a USING flag?
+			if ($nodeCopy['ref_type'] == 'USING' || $nodeCopy['ref_type'] == 'ON') {
+				#check if this column part of the select clause
+				$found = 0;
+				foreach ($toThisNode['SELECT'] as $selNode) {
+					$tmp = explode('.', $selNode['base_expr']);
+					if ($nodeCopy['ref_clause'] == $tmp[0] || $nodeCopy['ref_clause'] == $tmp[1]) {
+						$found = 1;
+						break;
+					}
+				}
 
-        if ($found == 0) {
-          #not found, add to the select list
-          $tmp = explode('.', $nodeCopy['ref_clause']);
+				if ($found == 0) {
+					#not found, add to the select list
+					$tmp = explode('.', $nodeCopy['ref_clause']);
 
-          $newSelNode = array();
-          $newSelNode['expr_type'] = 'colref';
+					$newSelNode = array();
+					$newSelNode['expr_type'] = 'colref';
 
-          if (count($tmp) == 1) {
-            $newSelNode['alias'] = '`' . $tblAlias . '.' . $tmp[0] . '`';
-            $newSelNode['base_expr'] = $tblAlias . '.' . $tmp[0];
-          } else {
-            $newSelNode['alias'] = '`' . $tblAlias . '.' . $tmp[1] . '`';
-            $newSelNode['base_expr'] = $tblAlias . '.' . $tmp[1];
-          }
+					if (count($tmp) == 1) {
+						$newSelNode['alias'] = '`' . $tblAlias . '.' . $tmp[0] . '`';
+						$newSelNode['base_expr'] = $tblAlias . '.' . $tmp[0];
+					} else {
+						$newSelNode['alias'] = '`' . $tblAlias . '.' . $tmp[1] . '`';
+						$newSelNode['base_expr'] = $tblAlias . '.' . $tmp[1];
+					}
 
-          $newSelNode['sub_tree'] = false;
+					$newSelNode['sub_tree'] = false;
 
-          array_push($toThisNode['SELECT'], $newSelNode);
-        }
+					array_push($toThisNode['SELECT'], $newSelNode);
+				}
 
-        #remove the reference to the USING from the copy
-        $nodeCopy['ref_type'] = '';
-        $nodeCopy['ref_clause'] = '';
-      }
+				#remove the reference to the USING from the copy
+				$nodeCopy['ref_type'] = '';
+				$nodeCopy['ref_clause'] = '';
+			}
 
-      $nodeCopy['join_type'] = 'JOIN';
-      if ($nodeCopy['alias'] == $nodeCopy['table'])
-        $nodeCopy['alias'] = "";
+			$nodeCopy['join_type'] = 'JOIN';
+			if ($nodeCopy['alias'] == $nodeCopy['table'])
+				$nodeCopy['alias'] = "";
 
-      array_push($toThisNode['FROM'], $nodeCopy);
-    }
-  }
+			array_push($toThisNode['FROM'], $nodeCopy);
+		}
+	}
 }
 
 #collect all participating nodes from the sql tree
@@ -1433,69 +1453,69 @@ function PHPSQLaddOuterQueryFrom(&$sqlTree, &$table, &$toThisNode, $tableList, $
  * into the returnArray. The function returns the number of columns that are different to the specified table.
  */
 function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnArray, &$tableList, $recLevel, $startBranch = true) {
-  $countDiffTables = 0;
-  $tblAlias = str_replace("`", "", $tblAlias);
+	$countDiffTables = 0;
+	$tblAlias = str_replace("`", "", $tblAlias);
 
-  $workload = array();
-  if (array_key_exists('SELECT', $sqlSelect)) {
-    $workload = $sqlSelect['SELECT'];
-  } else {
-    $workload = $sqlSelect;
-  }
+	$workload = array();
+	if (array_key_exists('SELECT', $sqlSelect)) {
+		$workload = $sqlSelect['SELECT'];
+	} else {
+		$workload = $sqlSelect;
+	}
 
-  foreach ($workload as $node) {
-    if ($node['expr_type'] != 'colref' && $node['sub_tree'] !== false) {
-      $countDiffTables += PHPSQLcollectColumns($node['sub_tree'], $tblDb, $tblName, $tblAlias, $returnArray, $tableList, $recLevel, false);
+	foreach ($workload as $node) {
+		if ($node['expr_type'] != 'colref' && $node['sub_tree'] !== false) {
+			$countDiffTables += PHPSQLcollectColumns($node['sub_tree'], $tblDb, $tblName, $tblAlias, $returnArray, $tableList, $recLevel, false);
 
-      if ($startBranch === true && $countDiffTables == 0) {
-        array_push($returnArray, $node);
-      }
-    } else if ($node['expr_type'] == 'colref' || ($node['base_expr'] === '*' && $startBranch === true)) {
-      $tmp = explode('.', trim($node['base_expr'], '()'));
-      if (count($tmp) == 1) {
-        $currCol = $tmp[0];
-        $currTable = false;
-        $currDB = false;
-      } else if (count($tmp) == 2) {
-        $currTable = trim($tmp[0], "`");
-        $currCol = $tmp[1];
-        $currDB = false;
-      } else {
-        $currDB = trim($tmp[0], "`");
-        $currTable = trim($tmp[1], "`");
-        $currCol = $tmp[2];
-      }
+			if ($startBranch === true && $countDiffTables == 0) {
+				array_push($returnArray, $node);
+			}
+		} else if ($node['expr_type'] == 'colref' || ($node['base_expr'] === '*' && $startBranch === true)) {
+			$tmp = explode('.', trim($node['base_expr'], '()'));
+			if (count($tmp) == 1) {
+				$currCol = $tmp[0];
+				$currTable = false;
+				$currDB = false;
+			} else if (count($tmp) == 2) {
+				$currTable = trim($tmp[0], "`");
+				$currCol = $tmp[1];
+				$currDB = false;
+			} else {
+				$currDB = trim($tmp[0], "`");
+				$currTable = trim($tmp[1], "`");
+				$currCol = $tmp[2];
+			}
 
 //	    if ($currTable == $tblAlias || ($tblAlias == $tblDb . "." . $tblName && $currTable === false) || $currTable == $tblName) {
-      if ($currTable == $tblAlias || ($currTable === false) || $currTable == $tblName || 
-             $tblAlias == $currDB . "." . $currTable) {
-        if ($startBranch === true) {
-          array_push($returnArray, $node);
-        }
-      } else {
-        #check if this table has already been selected and processed. if yes, we can already process it and
-        #donot need to wait
-        $found = false;
-        foreach ($tableList as $key => $tblListNode) {
-          #skip everything not yet processed...
-          if ($key < $recLevel) {
-            continue;
-          }
+			if ($currTable == $tblAlias || ($currTable === false) || $currTable == $tblName || 
+						 $tblAlias == $currDB . "." . $currTable) {
+				if ($startBranch === true) {
+					array_push($returnArray, $node);
+				}
+			} else {
+				#check if this table has already been selected and processed. if yes, we can already process it and
+				#donot need to wait
+				$found = false;
+				foreach ($tableList as $key => $tblListNode) {
+					#skip everything not yet processed...
+					if ($key < $recLevel) {
+						continue;
+					}
 
-          if ($currTable == $tblListNode['alias']) {
-            $found = true;
-            break;
-          }
-        }
+					if ($currTable == $tblListNode['alias']) {
+						$found = true;
+						break;
+					}
+				}
 
-        if ($found === false) {
-          $countDiffTables += 1;
-        }
-      }
-    }
-  }
+				if ($found === false) {
+					$countDiffTables += 1;
+				}
+			}
+		}
+	}
 
-  return $countDiffTables;
+	return $countDiffTables;
 }
 
 /**
@@ -1505,82 +1525,82 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
  * @param toThisNode the node where the SELECT clause is added to
  * @param tableList the sorted table list
  * @param recLevel current recursion level
-  * 
+	* 
  * Takes the SELECT clause from sqlTree and adds it to the current node. 
  */
 function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList, $recLevel) {
-  if (!array_key_exists('SELECT', $sqlTree)) {
-    return;
-  }
+	if (!array_key_exists('SELECT', $sqlTree)) {
+		return;
+	}
 
-  #if the SELECT key does not exist, create it
-  if (!array_key_exists('SELECT', $toThisNode)) {
-    $toThisNode['SELECT'] = array();
-  }
+	#if the SELECT key does not exist, create it
+	if (!array_key_exists('SELECT', $toThisNode)) {
+		$toThisNode['SELECT'] = array();
+	}
 
-  $tblAlias = $table['alias'];
-  $tmp = explode('.', $table['name']);
-  if (count($tmp) == 1) {
-    $tblDb = false;
-    $tblName = $tmp[0];
-  } else {
-    $tblDb = $tmp[0];
-    $tblName = $tmp[1];
-  }
+	$tblAlias = $table['alias'];
+	$tmp = explode('.', $table['name']);
+	if (count($tmp) == 1) {
+		$tblDb = false;
+		$tblName = $tmp[0];
+	} else {
+		$tblDb = $tmp[0];
+		$tblName = $tmp[1];
+	}
 
-  #collect all columns from the sql tree
-  $partList = array();
-  PHPSQLcollectColumns($sqlTree, $tblDb, $tblName, trim($tblAlias, '`'), $partList, $tableList, $recLevel);
+	#collect all columns from the sql tree
+	$partList = array();
+	PHPSQLcollectColumns($sqlTree, $tblDb, $tblName, trim($tblAlias, '`'), $partList, $tableList, $recLevel);
 
-  foreach ($partList as $node) {
-    array_push($toThisNode['SELECT'], $node);
+	foreach ($partList as $node) {
+		array_push($toThisNode['SELECT'], $node);
 
-    $key = array_search($node, $sqlTree['SELECT']);
-    unset($sqlTree['SELECT'][$key]);
-  }
+		$key = array_search($node, $sqlTree['SELECT']);
+		unset($sqlTree['SELECT'][$key]);
+	}
 
-  //if this is recLevel = 0, add all remaining columns as well
-  if($recLevel == 0) {
-    foreach($sqlTree['SELECT'] as $node) {
-      array_push($toThisNode['SELECT'], $node);
-    }
-  
-    $sqlTree['SELECT'] = array();
-  }
+	//if this is recLevel = 0, add all remaining columns as well
+	if($recLevel == 0) {
+		foreach($sqlTree['SELECT'] as $node) {
+			array_push($toThisNode['SELECT'], $node);
+		}
+	
+		$sqlTree['SELECT'] = array();
+	}
 
-  #in order for the joins to work properly, collect all the variables that
-  #somehow participate in the where
-  if (empty($sqlTree['WHERE'])) {
-    return;
-  }
+	#in order for the joins to work properly, collect all the variables that
+	#somehow participate in the where
+	if (empty($sqlTree['WHERE'])) {
+		return;
+	}
 
-  $tmpList1 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], $tblAlias);
-  $tmpList2 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], $tblName);
+	$tmpList1 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], $tblAlias);
+	$tmpList2 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], $tblName);
 
-  //this handles (crudely) the case, when no alias is given to the DB
-  if($table['name'] == $table['alias']) {
-    $tmpList3 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], "");
-    $tmpList2 = array_merge($tmpList2, $tmpList3);
-  }
+	//this handles (crudely) the case, when no alias is given to the DB
+	if($table['name'] == $table['alias']) {
+		$tmpList3 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], "");
+		$tmpList2 = array_merge($tmpList2, $tmpList3);
+	}
  
-  $listOfWhereCols = array_merge($tmpList1, $tmpList2);
+	$listOfWhereCols = array_merge($tmpList1, $tmpList2);
 
-  foreach ($listOfWhereCols as $cols) {
-    $find = false;
-    foreach ($toThisNode['SELECT'] as &$node) {
-    if (trim(str_replace("`", "", $node['base_expr']), ' ') == trim(str_replace("`", "", $cols['base_expr']), ' ')) {
-      $find = true;
-      break;
-      }
-    }
+	foreach ($listOfWhereCols as $cols) {
+		$find = false;
+		foreach ($toThisNode['SELECT'] as &$node) {
+		if (trim(str_replace("`", "", $node['base_expr']), ' ') == trim(str_replace("`", "", $cols['base_expr']), ' ')) {
+			$find = true;
+			break;
+			}
+		}
 
-    if ($find === false) {
-      #mark this select as comming from a where
-      $cols['where_col'] = true;
+		if ($find === false) {
+			#mark this select as comming from a where
+			$cols['where_col'] = true;
 
-      array_push($toThisNode['SELECT'], $cols);
-    }
-  }
+			array_push($toThisNode['SELECT'], $cols);
+		}
+	}
 }
 
 /**
@@ -1594,37 +1614,37 @@ function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList,
  * name.
  */
 function PHPSQLgetAllColsFromWhere($whereTree, $table) {
-  $returnArray = array();
+	$returnArray = array();
 
-  foreach ($whereTree as $node) {
-    if (is_array($node['sub_tree']) && $node['expr_type'] != "subquery") {
-      $tmpArray = PHPSQLgetAllColsFromWhere($node['sub_tree'], $table);
-      $returnArray = array_merge($returnArray, $tmpArray);
-    }
+	foreach ($whereTree as $node) {
+		if (is_array($node['sub_tree']) && $node['expr_type'] != "subquery") {
+			$tmpArray = PHPSQLgetAllColsFromWhere($node['sub_tree'], $table);
+			$returnArray = array_merge($returnArray, $tmpArray);
+		}
 
-    if($node['expr_type'] != 'colref')
-      continue;
+		if($node['expr_type'] != 'colref')
+			continue;
 
-    $tmp = explode('.', $node['base_expr']);
-    $currTable = $tmp[0];
+		$tmp = explode('.', $node['base_expr']);
+		$currTable = $tmp[0];
 
-    #getting rid of the table/alias name in the column description (but only if a table
-    #name is provided $table)
-    if(!empty($table) && count($tmp) > 1) {
-      $node['base_expr'] = implode(".", array_slice($tmp, 1));
-    }
+		#getting rid of the table/alias name in the column description (but only if a table
+		#name is provided $table)
+		if(!empty($table) && count($tmp) > 1) {
+			$node['base_expr'] = implode(".", array_slice($tmp, 1));
+		}
 
-    if ($table == $currTable || (count($tmp) == 1 && $table === "")) {
-      $newNode = array();
-      $newNode['expr_type'] = $node['expr_type'];
-      $newNode['alias'] = "`" . $node['base_expr'] . "`";
-      $newNode['base_expr'] = $node['base_expr'];
-      $newNode['sub_tree'] = $node['sub_tree'];
-      array_push($returnArray, $newNode);
-    }
-  }
+		if ($table == $currTable || (count($tmp) == 1 && $table === "")) {
+			$newNode = array();
+			$newNode['expr_type'] = $node['expr_type'];
+			$newNode['alias'] = "`" . $node['base_expr'] . "`";
+			$newNode['base_expr'] = $node['base_expr'];
+			$newNode['sub_tree'] = $node['sub_tree'];
+			array_push($returnArray, $newNode);
+		}
+	}
 
-  return $returnArray;
+	return $returnArray;
 }
 
 /**
@@ -1638,28 +1658,28 @@ function PHPSQLgetAllColsFromWhere($whereTree, $table) {
  * go through the list sequentially in the given order.
  */
 function PHPSQLdetStartTable($tableList, $headNodeTables = array()) {
-  $maxVal = -1;
-  $currTable = NULL;
+	$maxVal = -1;
+	$currTable = NULL;
 
-    #sort the table and return
-  $condCount = array();
-  foreach ($tableList as $key => $table) {
-   if ($table['name'] != "DEPENDENT-SUBQUERY") {
-     $condCount[$key] = $table['cond_count'];
+		#sort the table and return
+	$condCount = array();
+	foreach ($tableList as $key => $table) {
+	 if ($table['name'] != "DEPENDENT-SUBQUERY") {
+		 $condCount[$key] = $table['cond_count'];
 
-     //check if this is a table that is only on the head node
-     //TODO: make smarter check... (at the moment checking if table name is included in one or the other,
-     //this also allows definition of complete database and will consider this if database is given in table
-     //name)
-     foreach($headNodeTables as $headNodeTable) {
-      if(strpos($table['name'], $headNodeTable) !== false) {
-        $condCount[$key] = 99999999 + $table['cond_count'];
-        break;
-      }
-     }
-   } else {
-     $condCount[$key] = 999999;
-   }
+		 //check if this is a table that is only on the head node
+		 //TODO: make smarter check... (at the moment checking if table name is included in one or the other,
+		 //this also allows definition of complete database and will consider this if database is given in table
+		 //name)
+		 foreach($headNodeTables as $headNodeTable) {
+			if(strpos($table['name'], $headNodeTable) !== false) {
+				$condCount[$key] = 99999999 + $table['cond_count'];
+				break;
+			}
+		 }
+	 } else {
+		 $condCount[$key] = 999999;
+	 }
  }
 
  array_multisort($condCount, SORT_ASC, $tableList);
@@ -1676,14 +1696,14 @@ function PHPSQLdetStartTable($tableList, $headNodeTables = array()) {
  * count.
  */
 function PHPSQLCountWhereConditions(&$tableList) {
-  foreach ($tableList as &$table) {
-   $table['cond_count'] = 0;
+	foreach ($tableList as &$table) {
+	 $table['cond_count'] = 0;
 
-   if (!array_key_exists('where_cond', $table)) {
-     continue;
-   }
+	 if (!array_key_exists('where_cond', $table)) {
+		 continue;
+	 }
 
-   $table['cond_count'] = PHPSQLrecursCountWhereCond($table['where_cond']);
+	 $table['cond_count'] = PHPSQLrecursCountWhereCond($table['where_cond']);
  }
 }
 
@@ -1696,19 +1716,19 @@ function PHPSQLCountWhereConditions(&$tableList) {
  * where_cond attribute of the array. 
  */
 function PHPSQLrecursCountWhereCond($nodes) {
-  $result = 0;
+	$result = 0;
 
-  foreach ($nodes as $currNode) {
-    if (is_array($currNode['sub_tree'])) {
-      if ($currNode['expr_type'] != 'subquery') {
-        $result += PHPSQLrecursCountWhereCond($currNode['sub_tree']);
-      }
-    } else if ($currNode['expr_type'] == 'colref') {
-      $result += 1;
-    }
-  }
+	foreach ($nodes as $currNode) {
+		if (is_array($currNode['sub_tree'])) {
+			if ($currNode['expr_type'] != 'subquery') {
+				$result += PHPSQLrecursCountWhereCond($currNode['sub_tree']);
+			}
+		} else if ($currNode['expr_type'] == 'colref') {
+			$result += 1;
+		}
+	}
 
-  return $result;
+	return $result;
 }
 
 /**
@@ -1721,81 +1741,81 @@ function PHPSQLrecursCountWhereCond($nodes) {
  * dependant clauses (clauses involving more than one table) into the return array.
  */
 function PHPSQLGroupWhereCond($sqlTree, &$tableList) {
-  if (empty($sqlTree['WHERE'])) {
-    return;
-  }
+	if (empty($sqlTree['WHERE'])) {
+		return;
+	}
 
-  $whereTree = $sqlTree['WHERE'];
+	$whereTree = $sqlTree['WHERE'];
 
-  $dependantWheres = array();
+	$dependantWheres = array();
 
-  #loop through all where nodes and link the non operator nodes with the preceding operator
-  $oldNode = false;
-  foreach ($whereTree as $key => $node) {
-    if ($node['expr_type'] === "operator") {
-      $oldNode['operator'] = $node;
-      continue;
-    }
+	#loop through all where nodes and link the non operator nodes with the preceding operator
+	$oldNode = false;
+	foreach ($whereTree as $key => $node) {
+		if ($node['expr_type'] === "operator") {
+			$oldNode['operator'] = $node;
+			continue;
+		}
 
-    $oldNode = &$whereTree[$key];
-  }
+		$oldNode = &$whereTree[$key];
+	}
 
-  foreach ($whereTree as $key => $node) {
-    #look through all the terms and add the independant ones to the table list
-    #if we hit recursion, we check for the topmost terms
-    #TODO: strategy to move deeper into the expression trees and collect terms that
-    #can be moved out
+	foreach ($whereTree as $key => $node) {
+		#look through all the terms and add the independant ones to the table list
+		#if we hit recursion, we check for the topmost terms
+		#TODO: strategy to move deeper into the expression trees and collect terms that
+		#can be moved out
 
-    if ($node['expr_type'] === "operator") {
-      continue;
-    }
+		if ($node['expr_type'] === "operator") {
+			continue;
+		}
 
-    $node['oldKey'] = $key;
+		$node['oldKey'] = $key;
 
-    $currParticipants = PHPSQLGetListOfParticipants($node);
+		$currParticipants = PHPSQLGetListOfParticipants($node);
 
-    #check if this is a condition with one or more participants
-    #trim () because we could be dealing with a column in a function
-    $table = explode(".", trim($currParticipants[0]['base_expr'], "()"));
-    if (count($table) > 1) {
-      $table = $table[0];
-    } else {
-      $table = false;
-    }
+		#check if this is a condition with one or more participants
+		#trim () because we could be dealing with a column in a function
+		$table = explode(".", trim($currParticipants[0]['base_expr'], "()"));
+		if (count($table) > 1) {
+			$table = $table[0];
+		} else {
+			$table = false;
+		}
 
-    foreach ($currParticipants as $currCol) {
-      #we could be dealing with a column in a function
-      $currTable = explode(".", trim($currCol['base_expr'], "()"));
-      if (count($currTable) > 1) {
-        $currTable = $currTable[0];
-      } else {
-        $currTable = false;
-      }
+		foreach ($currParticipants as $currCol) {
+			#we could be dealing with a column in a function
+			$currTable = explode(".", trim($currCol['base_expr'], "()"));
+			if (count($currTable) > 1) {
+				$currTable = $currTable[0];
+			} else {
+				$currTable = false;
+			}
 
-      if ($table != $currTable && $table !== false && $currTable !== false) {
-        array_push($dependantWheres, $node);
-        continue 2;
-      }
-    }
+			if ($table != $currTable && $table !== false && $currTable !== false) {
+				array_push($dependantWheres, $node);
+				continue 2;
+			}
+		}
 
-    #find this table in the table list and add condition there
-    foreach ($tableList as &$currTableInList) {
-      if (trim($table, '`') == trim($currTableInList['alias'], '`') || $table === false) {
-        if (!array_key_exists('where_cond', $currTableInList)) {
-          $currTableInList['where_cond'] = array();
-        }
+		#find this table in the table list and add condition there
+		foreach ($tableList as &$currTableInList) {
+			if (trim($table, '`') == trim($currTableInList['alias'], '`') || $table === false) {
+				if (!array_key_exists('where_cond', $currTableInList)) {
+					$currTableInList['where_cond'] = array();
+				}
 
-        if (array_key_exists('operator', $node)) {
-          $operator = $node['operator'];
-          unset($node['operator']);
-          array_push($currTableInList['where_cond'], $node);
-          array_push($currTableInList['where_cond'], $operator);
-        } else {
-          array_push($currTableInList['where_cond'], $node);
-        }
-        break;
-    }
-  }
+				if (array_key_exists('operator', $node)) {
+					$operator = $node['operator'];
+					unset($node['operator']);
+					array_push($currTableInList['where_cond'], $node);
+					array_push($currTableInList['where_cond'], $operator);
+				} else {
+					array_push($currTableInList['where_cond'], $node);
+				}
+				break;
+		}
+	}
 }
 
 return $dependantWheres;
@@ -1809,21 +1829,21 @@ return $dependantWheres;
  * This function collects all columns that are included in the given node of the tree.
  */
 function PHPSQLGetListOfParticipants($node) {
-  $partArray = array();
+	$partArray = array();
 
-  if (is_array($node['sub_tree'])) {
+	if (is_array($node['sub_tree'])) {
 	#handle subqueries in WHERE statements differntly
-   if ($node['expr_type'] == 'subquery') {
-     
-   } else {
-     foreach ($node['sub_tree'] as $subTreeNode) {
-      $currParticipants = PHPSQLGetListOfParticipants($subTreeNode);
+	 if ($node['expr_type'] == 'subquery') {
+		 
+	 } else {
+		 foreach ($node['sub_tree'] as $subTreeNode) {
+			$currParticipants = PHPSQLGetListOfParticipants($subTreeNode);
 
-      if (is_array($currParticipants)) {
-        $partArray = array_merge($partArray, $currParticipants);
-      }
-    }
-  }
+			if (is_array($currParticipants)) {
+				$partArray = array_merge($partArray, $currParticipants);
+			}
+		}
+	}
 } else if ($node['expr_type'] === "colref") {
 	array_push($partArray, $node);
 } else {
@@ -1842,40 +1862,40 @@ return $partArray;
  */
 function PHPSQLGroupTablesAndCols($sqlTree, &$listOfTables) {
 
-  $selectTree = $sqlTree['SELECT'];
-  $fromTree = $sqlTree['FROM'];
+	$selectTree = $sqlTree['SELECT'];
+	$fromTree = $sqlTree['FROM'];
 
-  foreach ($fromTree as $currTable) {
-   $table = array();
-   $table['name'] = $currTable['table'];
-   $table['alias'] = $currTable['alias'];
-   $table['sel_columns'] = array();
-   array_push($listOfTables, $table);
+	foreach ($fromTree as $currTable) {
+	 $table = array();
+	 $table['name'] = $currTable['table'];
+	 $table['alias'] = $currTable['alias'];
+	 $table['sel_columns'] = array();
+	 array_push($listOfTables, $table);
  }
 
-    #put dependant queries at the end of the list
+		#put dependant queries at the end of the list
  $currIndex = count($listOfTables) - 1;
  foreach ($listOfTables as $key => $node) {
-   if ($node['name'] == 'DEPENDENT-SUBQUERY' && $key < $currIndex) {
-     $tmpNode = $listOfTables[$currIndex];
-     $listOfTables[$currIndex] = $node;
-     $listOfTables[$key] = $tmpNode;
+	 if ($node['name'] == 'DEPENDENT-SUBQUERY' && $key < $currIndex) {
+		 $tmpNode = $listOfTables[$currIndex];
+		 $listOfTables[$currIndex] = $node;
+		 $listOfTables[$key] = $tmpNode;
 
-     $currIndex--;
-   }
+		 $currIndex--;
+	 }
  }
 
-    #link the columns with the tables
+		#link the columns with the tables
  foreach ($selectTree as $currColumn) {
-   $fields = explode('.', $currColumn['alias']);
+	 $fields = explode('.', $currColumn['alias']);
 
-   $currAlias = trim($fields[0], ' `');
-   foreach ($listOfTables as &$currTable) {
-     if ($currTable['alias'] === $currAlias) {
-      array_push($currTable['sel_columns'], $currColumn);
-      break;
-    }
-  }
+	 $currAlias = trim($fields[0], ' `');
+	 foreach ($listOfTables as &$currTable) {
+		 if ($currTable['alias'] === $currAlias) {
+			array_push($currTable['sel_columns'], $currColumn);
+			break;
+		}
+	}
 }
 }
 
@@ -1888,19 +1908,19 @@ function PHPSQLGroupTablesAndCols($sqlTree, &$listOfTables) {
  */
 function PHPSQLGroupWhereTerms($sqlTree) {
 
-  if (empty($sqlTree['WHERE'])) {
-    return $sqlTree;
-  }
+	if (empty($sqlTree['WHERE'])) {
+		return $sqlTree;
+	}
 
-  $whereTree = $sqlTree['WHERE'];
+	$whereTree = $sqlTree['WHERE'];
 
-  $newTree = array();
+	$newTree = array();
 
-  PHPSQLParseWhereTokens($whereTree, $newTree);
+	PHPSQLParseWhereTokens($whereTree, $newTree);
 
-  $sqlTree['WHERE'] = $newTree;
+	$sqlTree['WHERE'] = $newTree;
 
-  return $sqlTree;
+	return $sqlTree;
 }
 
 
@@ -1912,21 +1932,21 @@ function PHPSQLGroupWhereTerms($sqlTree) {
  * This function takes the parse tree, looks at the where clause and puts brackets around each logical element.
  */
 function PHPSQLParseWhereTokens($tree, &$newTree) {
-  //first we walk the tree and gather terms. These are BETWEEN statements and anything that has a
-  //equal sign inside (or in other words, everything that is delimited by an OR or AND)
-  $groupedTree = array();
+	//first we walk the tree and gather terms. These are BETWEEN statements and anything that has a
+	//equal sign inside (or in other words, everything that is delimited by an OR or AND)
+	$groupedTree = array();
 
-  PHPSQLParseWhereTokens_groupTerms($tree, $groupedTree);
+	PHPSQLParseWhereTokens_groupTerms($tree, $groupedTree);
 
-  //we now gather all AND expressions and put brackets around them.
-  $groupedAndTree = array();
-  PHPSQLParseWhereTokens_groupANDExpressions($groupedTree['sub_tree'], $groupedAndTree);
+	//we now gather all AND expressions and put brackets around them.
+	$groupedAndTree = array();
+	PHPSQLParseWhereTokens_groupANDExpressions($groupedTree['sub_tree'], $groupedAndTree);
 
-  //all nodes have been gathered into one sub-tree above, that we actually don't need
-  //move all nodes one level up
-  foreach($groupedAndTree['sub_tree'] as $node) {
-    array_push($newTree, $node);
-  }
+	//all nodes have been gathered into one sub-tree above, that we actually don't need
+	//move all nodes one level up
+	foreach($groupedAndTree['sub_tree'] as $node) {
+		array_push($newTree, $node);
+	}
 }
 
 /**
@@ -1944,92 +1964,92 @@ function PHPSQLParseWhereTokens($tree, &$newTree) {
  *                  or ( ( y = 34 ) and ( x between 1 and 2 ) ) or ( z = 1 + 5 * 87.2134 )
  */
 function PHPSQLParseWhereTokens_groupANDExpressions($tree, &$newTree) {
-  $previousNode = array();
-  $foundAnd = false;
-  $foundOr = false;
+	$previousNode = array();
+	$foundAnd = false;
+	$foundOr = false;
 
-  if(!array_key_exists("sub_tree", $newTree)) {
-    $newTree['expr_type'] = "expression";
-    $newTree['base_expr'] = "";
-    $newTree['sub_tree'] = array();
-  }
+	if(!array_key_exists("sub_tree", $newTree)) {
+		$newTree['expr_type'] = "expression";
+		$newTree['base_expr'] = "";
+		$newTree['sub_tree'] = array();
+	}
 
-  foreach ($tree as $term) {
-    $processSub = false;
-    $currNode = $term;
+	foreach ($tree as $term) {
+		$processSub = false;
+		$currNode = $term;
 
-    //only process sub_trees, that have more than 3 elements inside, otherwise a possible
-    //AND term has already been grouped.
-    if(array_key_exists("sub_tree", $term) && count($term['sub_tree']) > 3) {
-      //only process sub_trees, that have further subtrees (i.e. no end nodes that are
-      //already bracketed anyways)
-      foreach ($term['sub_tree'] as $node) {
-        if(array_key_exists("sub_tree", $node) && $node['sub_tree'] !== false) {
-          $processSub = true;
-          break;
-        }
-      }
-    }
+		//only process sub_trees, that have more than 3 elements inside, otherwise a possible
+		//AND term has already been grouped.
+		if(array_key_exists("sub_tree", $term) && count($term['sub_tree']) > 3) {
+			//only process sub_trees, that have further subtrees (i.e. no end nodes that are
+			//already bracketed anyways)
+			foreach ($term['sub_tree'] as $node) {
+				if(array_key_exists("sub_tree", $node) && $node['sub_tree'] !== false) {
+					$processSub = true;
+					break;
+				}
+			}
+		}
 
-    if($processSub === true) {
-      $currSubTree = array();
-      PHPSQLParseWhereTokens_groupANDExpressions($term['sub_tree'], $currSubTree);
+		if($processSub === true) {
+			$currSubTree = array();
+			PHPSQLParseWhereTokens_groupANDExpressions($term['sub_tree'], $currSubTree);
 
-      PHPSQLParseWhereTokens_createBaseExpr($currSubTree, $newTree);
+			PHPSQLParseWhereTokens_createBaseExpr($currSubTree, $newTree);
 
-      $currNode = $currSubTree;
-    }
+			$currNode = $currSubTree;
+		}
 
-    //only process if AND is preceeded by a OR
-    if($currNode['expr_type'] === "operator" && 
-        (strtolower($currNode['base_expr']) === "or" || $currNode['base_expr'] === "||")) {
+		//only process if AND is preceeded by a OR
+		if($currNode['expr_type'] === "operator" && 
+				(strtolower($currNode['base_expr']) === "or" || $currNode['base_expr'] === "||")) {
 
-      $foundOr = true;
-    }
+			$foundOr = true;
+		}
 
-    //check if this is an AND
-    if($foundOr === true && $currNode['expr_type'] === "operator" && 
-        (strtolower($currNode['base_expr']) === "and" || $currNode['base_expr'] === "&&")) {
+		//check if this is an AND
+		if($foundOr === true && $currNode['expr_type'] === "operator" && 
+				(strtolower($currNode['base_expr']) === "and" || $currNode['base_expr'] === "&&")) {
 
-      $foundAnd = true;
-      $foundOr = false;
+			$foundAnd = true;
+			$foundOr = false;
 
-      $newNode = array();
-      $newNode['expr_type'] = "expression";
-      $newNode['base_expr'] = "";
-      $newNode['sub_tree'] = array();
+			$newNode = array();
+			$newNode['expr_type'] = "expression";
+			$newNode['base_expr'] = "";
+			$newNode['sub_tree'] = array();
 
-      array_push($newNode['sub_tree'], $previousNode);
-      array_push($newNode['sub_tree'], $currNode);
+			array_push($newNode['sub_tree'], $previousNode);
+			array_push($newNode['sub_tree'], $currNode);
 
-      $previousNode = $newNode;
+			$previousNode = $newNode;
 
-      continue;
-    }
+			continue;
+		}
 
-    //if we are not in a AND clause, save this node in previous node and add any previous node
-    //to the array
-    if(!empty($previousNode) && $foundAnd === true) {
-      array_push($previousNode['sub_tree'], $currNode);
+		//if we are not in a AND clause, save this node in previous node and add any previous node
+		//to the array
+		if(!empty($previousNode) && $foundAnd === true) {
+			array_push($previousNode['sub_tree'], $currNode);
 
-      PHPSQLParseWhereTokens_createBaseExpr($previousNode);
+			PHPSQLParseWhereTokens_createBaseExpr($previousNode);
 
-      $foundAnd = false;
-      $foundOr = false;
-    } else {
-      if(!empty($previousNode)) {
-        array_push($newTree['sub_tree'], $previousNode);
-      }
+			$foundAnd = false;
+			$foundOr = false;
+		} else {
+			if(!empty($previousNode)) {
+				array_push($newTree['sub_tree'], $previousNode);
+			}
 
-      $previousNode = $currNode;
-    }
-  }
+			$previousNode = $currNode;
+		}
+	}
 
-  array_push($newTree['sub_tree'], $previousNode);
+	array_push($newTree['sub_tree'], $previousNode);
 
-  if(empty($newTree['base_expr'])) {
-    PHPSQLParseWhereTokens_createBaseExpr($newTree);
-  }
+	if(empty($newTree['base_expr'])) {
+		PHPSQLParseWhereTokens_createBaseExpr($newTree);
+	}
 }
 
 /**
@@ -2045,79 +2065,79 @@ function PHPSQLParseWhereTokens_groupANDExpressions($tree, &$newTree) {
  *                    or ( y = 34 ) and ( x between 1 and 2 ) )
  */
 function PHPSQLParseWhereTokens_groupTerms($tree, &$newTree) {
-  $currLeaf = array();
-  $isBetween = false;
+	$currLeaf = array();
+	$isBetween = false;
 
-  $currLeaf['expr_type'] = "expression";
-  $currLeaf['base_expr'] = "";
-  $currLeaf['sub_tree'] = array();
+	$currLeaf['expr_type'] = "expression";
+	$currLeaf['base_expr'] = "";
+	$currLeaf['sub_tree'] = array();
 
-  if(!array_key_exists("sub_tree", $newTree)) {
-    $newTree['expr_type'] = "expression";
-    $newTree['base_expr'] = "";
-    $newTree['sub_tree'] = array();
-  }
+	if(!array_key_exists("sub_tree", $newTree)) {
+		$newTree['expr_type'] = "expression";
+		$newTree['base_expr'] = "";
+		$newTree['sub_tree'] = array();
+	}
 
-  foreach ($tree as $token) {
-    //NOTE: Subqueries are treated as normal terms in this context.
+	foreach ($tree as $token) {
+		//NOTE: Subqueries are treated as normal terms in this context.
 
-    #a normal node - if this node is an AND or OR, split there
-    if(array_key_exists('expr_type', $token) && 
-        $token['expr_type'] === "operator" &&
-        (strtolower($token['base_expr']) === "or" || strtolower($token['base_expr']) === "and")) {
+		#a normal node - if this node is an AND or OR, split there
+		if(array_key_exists('expr_type', $token) && 
+				$token['expr_type'] === "operator" &&
+				(strtolower($token['base_expr']) === "or" || strtolower($token['base_expr']) === "and")) {
 
-      //is this the and in the between clause? if yes, ignore this
-      if(strtolower($token['base_expr']) === "and" && $isBetween === true) {
-        $isBetween = false;
-      } else {
-        //it could be that currLeaf is empty - this is the case if a sub_tree has been added
-        //before - just add the operator then
-        if(!empty($currLeaf['sub_tree'])) {
-          PHPSQLParseWhereTokens_createBaseExpr($currLeaf);
+			//is this the and in the between clause? if yes, ignore this
+			if(strtolower($token['base_expr']) === "and" && $isBetween === true) {
+				$isBetween = false;
+			} else {
+				//it could be that currLeaf is empty - this is the case if a sub_tree has been added
+				//before - just add the operator then
+				if(!empty($currLeaf['sub_tree'])) {
+					PHPSQLParseWhereTokens_createBaseExpr($currLeaf);
 
-          array_push($newTree['sub_tree'], $currLeaf);
-        }
+					array_push($newTree['sub_tree'], $currLeaf);
+				}
 
-        array_push($newTree['sub_tree'], $token);
+				array_push($newTree['sub_tree'], $token);
 
-        //create new leaf
-        $currLeaf['expr_type'] = "expression";
-        $currLeaf['base_expr'] = "";
-        $currLeaf['sub_tree'] = array();
+				//create new leaf
+				$currLeaf['expr_type'] = "expression";
+				$currLeaf['base_expr'] = "";
+				$currLeaf['sub_tree'] = array();
 
-        continue;
-      }
-    }
+				continue;
+			}
+		}
 
-    //is this a between case?
-    if(array_key_exists('expr_type', $token) && 
-        $token['expr_type'] === "operator" &&
-        strtolower($token['base_expr']) === "between") {
-      
-      $isBetween = true;
-    }
+		//is this a between case?
+		if(array_key_exists('expr_type', $token) && 
+				$token['expr_type'] === "operator" &&
+				strtolower($token['base_expr']) === "between") {
+			
+			$isBetween = true;
+		}
 
-    array_push($currLeaf['sub_tree'], $token);
-  }
+		array_push($currLeaf['sub_tree'], $token);
+	}
 
-  if(!empty($currLeaf['sub_tree'])) {
-    //the last leaf is remaining and wants to be added to the tree as well
-    PHPSQLParseWhereTokens_createBaseExpr($currLeaf);
+	if(!empty($currLeaf['sub_tree'])) {
+		//the last leaf is remaining and wants to be added to the tree as well
+		PHPSQLParseWhereTokens_createBaseExpr($currLeaf);
 
-    array_push($newTree['sub_tree'], $currLeaf);
-  }
+		array_push($newTree['sub_tree'], $currLeaf);
+	}
 
-  PHPSQLParseWhereTokens_createBaseExpr($newTree);
+	PHPSQLParseWhereTokens_createBaseExpr($newTree);
 }
 
 function PHPSQLParseWhereTokens_createBaseExpr(&$currLeaf) {
-  //create the base expression by looping over all nodes (no recursion needed here,
-  //since recursive elements already processed above)
-  $currLeaf['base_expr'] = "( ";
-  foreach ($currLeaf['sub_tree'] as $node) {
-    $currLeaf['base_expr'] .= $node['base_expr'] . " ";
-  }
-  $currLeaf['base_expr'] .= ")";
+	//create the base expression by looping over all nodes (no recursion needed here,
+	//since recursive elements already processed above)
+	$currLeaf['base_expr'] = "( ";
+	foreach ($currLeaf['sub_tree'] as $node) {
+		$currLeaf['base_expr'] .= $node['base_expr'] . " ";
+	}
+	$currLeaf['base_expr'] .= ")";
 }
 
 ?>
