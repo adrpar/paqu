@@ -530,6 +530,10 @@ if($found === false) {
  * of aliases in the outer node, adds all the columns that are selected in the subquery and needed
  * in the outer query to process ORDER, WHERE and the like, and it will reformulate the ORDER clause
  * in the outer query for the aggregate/coordination query to properly order things.
+ *
+ * It will also rewrite aliases to result sets if they are not known to the one of the sub-query.
+ * TODO: This is a dirty hack to handle more complicated dependencies, such as in this query:
+ * SELECT f3.fofId, p.x,p.y,p.z FROM MDR1.FOFParticles f, MDR1.FOFParticles3 f3, MDR1.particles85 p WHERE f.fofId = 85000000479 AND f.particleId = f3.particleId AND p.particleId = f.particleId ORDER BY f3.fofId ASC
  * 
  */
 function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $recLevel) {
@@ -585,6 +589,43 @@ function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $
 
 		foreach ($currInnerNode['sub_tree']['ORDER'] as $node) {
 			array_push($currOuterQuery['ORDER'], $node);
+		}
+	}
+
+	//check outer WHERES aliases - if an alias is not found, rename it to the first sub query found (usually this is the 
+	//nested one)
+	//TODO: any idea on how to do this better?? handles cases mentioned above
+	//go through FROM - find all aliases and alias of first subquery
+	$aliasList = array();
+	$firstSubqueryAlias = false;
+	foreach($currOuterQuery['FROM'] as $node) {
+		array_push($aliasList, $node['alias']);
+		if (!empty($node['sub_tree']) && $firstSubqueryAlias === false) {
+			$firstSubqueryAlias = $node['alias'];
+		}
+	}
+
+	//go through all WHERE terms and any alias not foudn in the list, rewrite to the one of the first subquery
+	rewriteWHEREAliasToFirstSubquery($currOuterQuery['WHERE'], $aliasList, $firstSubqueryAlias);
+}
+
+function rewriteWHEREAliasToFirstSubquery(&$tree, $aliasList, $firstSubqueryAlias) {
+	foreach($tree as &$node) {
+		if($node['sub_tree'] !== false) {
+			rewriteWHEREAliasToFirstSubquery($node['sub_tree'], $aliasList, $firstSubqueryAlias);
+			PHPSQLParseWhereTokens_createBaseExpr($node);
+		}
+
+		if($node['expr_type'] == "colref") {
+			$tmp = explode(".", $node['base_expr']);
+			if($tmp > 1) {
+				$currAlias = trim($tmp[0], "` ");
+				if(!in_array($currAlias, $aliasList)) {
+					unset($tmp[0]);
+					$node['base_expr'] = "`" . $firstSubqueryAlias . "`." . implode($tmp, ".");
+					break;
+				}
+			}
 		}
 	}
 }
@@ -1101,6 +1142,8 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
 	}
 
 	#add the stuff in the where_cond to the query and remove from the complete tree
+	$first = true;
+	$oldOperatorNode = false;
 	foreach ($table['where_cond'] as $key => $node) {
 		PHPSQLrewriteAliasWhere($node, $tableList, $recLevel, $currInnerNode);
 
@@ -1123,10 +1166,18 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
 			continue;
 		}
 
-		if($operatorNode !== false) {
+		if($first !== true && $operatorNode !== false) {
 			array_push($toThisNode['WHERE'], $operatorNode);
+		} else if ($oldOperatorNode !== false) {
+			//in rare cases this is needed, when things mingle too much.
+			//TODO: resolve the need for this!
+			array_push($toThisNode['WHERE'], $oldOperatorNode);
+		} else if ($operatorNode !== false) {
+			$first = false;
 		}
 		array_push($toThisNode['WHERE'], $node);
+
+		$oldOperatorNode = $operatorNode;
 	}
 }
 
