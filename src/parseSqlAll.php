@@ -220,7 +220,7 @@ function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false) 
     foreach($sqlTree['FROM'] as &$node) {
 		if($node['expr_type'] == "subquery" && $node['sub_tree'] != NULL) {
 		    $tree = processQueryWildcard($node['sub_tree'], $mysqlConn, $zendAdapter);
-		    $node['sub_tree'] = $tree->parsed;
+		    $node['sub_tree'] = $tree;
 		}
     }
 }
