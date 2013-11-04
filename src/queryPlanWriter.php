@@ -128,7 +128,8 @@ function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false
         #remove any LIMIT clause, that might interfere
         #if this limit is part of a subquery, there must be a closing parenthesis at pos > limit_pos
         $tmpPos = strrpos($query[0], "LIMIT");
-        if($tmpPos === false) {
+        $tmpParPos = strrpos($query[0], ")");
+        if($tmpPos === false || $tmpPos < $tmpParPos) {
             $tmpPos = strlen($query[0]);
         }
         $limitFreeQuery = substr($query[0], 0, $tmpPos);
