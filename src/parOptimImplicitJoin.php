@@ -383,6 +383,13 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 	PHPSQLaddOuterQuerySelect($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 	PHPSQLaddOuterQueryFrom($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
+	#link to the tree
+	if ($currInnerNode !== false) {
+		linkInnerQueryToOuter($currOuterQuery, $currInnerNode, $tableList, $recLevel);
+	}
+	$currDepQueryNode['sub_tree'] = $currOuterQuery;
+
+
 	PHPSQLaddOuterQueryUpdate($sqlTree, $table, $currOuterQuery);
 
 	PHPSQLaddOuterQueryGroup($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
@@ -395,7 +402,6 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 	PHPSQLaddOuterQueryIndex($sqlTree, $table, $currOuterQuery);
 
 	PHPSQLaddOuterQueryOptions($sqlTree, $table, $currOuterQuery);
-
 	#check if we have to add some stuff for two-pass aggregation functions such as stddev (like adding an average calculation)
 	#we need to add a subquery producing the temporary result here, so we add stuff to FROM and SELECT!
 	//PHPSQLaddAggregateTwoPassSubQuery($currOuterQuery);
@@ -413,16 +419,9 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 		if (!empty($sqlTree['DELETE']))
 			throw new RuntimeException('Inner Query DELETE: You have hit a not yet supported feature');
 	}
-
 	#resort the table list, now taking all the dependant queries for which data is already gathered into account
 	#dependant queries will have higher priorities than other constraints
 	PHPSQLresortCondTableList($tableList, $dependantWheres, $recLevel);
-
-	#link to the tree
-	if ($currInnerNode !== false) {
-		linkInnerQueryToOuter($currOuterQuery, $currInnerNode, $tableList, $recLevel);
-	}
-	$currDepQueryNode['sub_tree'] = $currOuterQuery;
 
 	#the upper most node is not a subquery of course...
 	if ($recLevel == 0) {
@@ -610,6 +609,10 @@ function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $
 }
 
 function rewriteWHEREAliasToFirstSubquery(&$tree, $aliasList, $firstSubqueryAlias) {
+	if(empty($tree)) {
+		return;
+	}
+	
 	foreach($tree as &$node) {
 		if($node['sub_tree'] !== false) {
 			rewriteWHEREAliasToFirstSubquery($node['sub_tree'], $aliasList, $firstSubqueryAlias);
@@ -877,15 +880,13 @@ function PHPSQLgetDepWhereConds($tableList, $dependantWheres, $possibleCombList)
 	 foreach ($listOfParticipants as $part) {
 		 $currTable = explode(".", $part['base_expr']);
 		 $currTable = $currTable[0];
-
 		 foreach ($possibleCombList as $key) {
-			if ($tableList[$key]['alias'] == $currTable) {
+			if (trim($tableList[$key]['alias'], "`") == trim($currTable, "`")) {
 				$count++;
 				break;
 			}
 		}
 	}
-
 	if ($count == count($listOfParticipants)) {
 	 array_push($outArray, $node);
  }
@@ -1035,6 +1036,13 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 
 	$listOfCols = array();
 	if ($toThisNode !== false) {
+		if(empty($toThisNode['sub_tree']['SELECT'])) {
+			//TODO: Solve quick fix - introduced through this query:
+			//select `b`.x, `b`.y, `b`.z, `b`.vx, `b`.vy, `b`.vz from Bolshoi.particles416 as `b`, (select x, y, z from Bolshoi.BDMV where snapnum=416 order by Mvir desc limit 1) as `a` where b.x between a.x - 25 and a.x + 25 and b.y between a.y - 25 and a.y + 25 and b.z > a.z-25
+			$toThisNode['sub_tree']['SELECT'] = $toThisNode['sub_tree']['FROM'][0]['sub_tree']['SELECT'];
+		}
+
+
 		foreach ($toThisNode['sub_tree']['SELECT'] as $selNode) {
 			array_push($listOfCols, $selNode);
 		}
@@ -1060,7 +1068,7 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 				if ($currTable !== false) {
 					#search for the table in the tablelist
 					foreach ($tableList as $tblKey => $currTbl) {
-						if ($currTbl['alias'] == $currTable) {
+						if (trim($currTbl['alias'], '`') == trim($currTable, "`")) {
 							break;
 						}
 					}
@@ -1137,7 +1145,7 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
 	}
 
 	#construct the WHERE part
-	if (!array_key_exists('WHERE', $toThisNode)) {
+	if (!array_key_exists('WHERE', $toThisNode) || $toThisNode['WHERE'] == NULL) {
 		$toThisNode['WHERE'] = array();
 	}
 
@@ -1265,7 +1273,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 					$node['alias'] = "`" . $tblAlias . "." . trim($node['alias'], "`") . "`";
 					$parsed[0]['base_expr'] = $node['base_expr'];
 					$parsed[0]['alias'] = $node['alias'];
-				} else if (trim($tmp[0], "` ") == $tblDb || trim($tmp[0], "` ") == $tblAlias) {
+				} else if (trim($tmp[0], "` ") == $tblDb || trim($tmp[0], "` ") == $tblAlias || count($tmp) == 1) {
 					$parsed[0]['order_clause'] = $node;
 					array_push($toThisNode['SELECT'], $parsed[0]);
 				} else {
@@ -1891,12 +1899,35 @@ function PHPSQLGetListOfParticipants($node) {
 			$currParticipants = PHPSQLGetListOfParticipants($subTreeNode);
 
 			if (is_array($currParticipants)) {
-				$partArray = array_merge($partArray, $currParticipants);
+				foreach($currParticipants as $currNode) {
+					$found = false;
+					foreach($partArray as $currPartNode) {
+						if($currNode['base_expr'] === $currPartNode['base_expr']) {
+							$found = true;
+							break;
+						}
+					}
+
+					if($found === false) {
+						array_push($partArray, $currNode);
+					}
+				}
 			}
 		}
 	}
 } else if ($node['expr_type'] === "colref") {
-	array_push($partArray, $node);
+	//check if this partner is already in the list
+	$found = false;
+	foreach($partArray as $currNode) {
+		if($currNode['base_expr'] === $node['base_expr']) {
+			$found = true;
+			break;
+		}
+	}
+
+	if($found === false) {
+		array_push($partArray, $node);
+	}
 } else {
 	$partArray = NULL;
 }
