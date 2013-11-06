@@ -67,7 +67,13 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
         }
 
         protected function processSelectStatement($parsed) {
-            $sql = $this->processSELECT($parsed['SELECT']) . " " . $this->processFROM($parsed['FROM']);
+            $distinct = false;
+            if(isset($parsed['OPTIONS']) && in_array("DISTINCT", $parsed['OPTIONS'])) {
+                $distinct = true;
+            }
+
+
+            $sql = $this->processSELECT($parsed['SELECT'], $distinct) . " " . $this->processFROM($parsed['FROM']);
             if (isset($parsed['WHERE'])) {
                 $sql .= " " . $this->processWHERE($parsed['WHERE']);
             }
@@ -109,7 +115,7 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
             return substr($sql, 0, -1);
         }
 
-        protected function processSELECT($parsed) {
+        protected function processSELECT($parsed, $distinct = false) {
             $sql = "";
             foreach ($parsed as $k => $v) {
                 $len = strlen($sql);
@@ -125,7 +131,12 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
                 $sql .= ",";
             }
             $sql = substr($sql, 0, -1);
-            return "SELECT " . $sql;
+
+            if($distinct === false) {
+                return "SELECT " . $sql;
+            } else {
+                return "SELECT DISTINCT " . $sql;
+            }
         }
 
         protected function processFROM($parsed) {

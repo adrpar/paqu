@@ -109,7 +109,7 @@ function PHPSQLprepareQuery($query, $headNodeTables = array()) {
  * doing a great job with dynamic SQL. However this gives the opportunity to actually intersect the query
  * plan and tweak/correct it if needed.
  */
-function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false, $aggregateDist = true) {
+function PHPSQLqueryPlanWriter($shard_query, $resultTable, $addRowNumber = false, $aggregateDist = false) {
     $commandArray = array();
     $dropTables = array();
 

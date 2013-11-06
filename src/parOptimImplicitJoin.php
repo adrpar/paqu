@@ -612,7 +612,7 @@ function rewriteWHEREAliasToFirstSubquery(&$tree, $aliasList, $firstSubqueryAlia
 	if(empty($tree)) {
 		return;
 	}
-	
+
 	foreach($tree as &$node) {
 		if($node['sub_tree'] !== false) {
 			rewriteWHEREAliasToFirstSubquery($node['sub_tree'], $aliasList, $firstSubqueryAlias);
