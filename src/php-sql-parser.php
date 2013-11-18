@@ -287,7 +287,21 @@ EOREGEX
 			}
 			/* reset the array if we deleted any tokens above */
 			$tokens = array_values($tokens);
-	
+
+
+			/*the regex has a further problem that it splits in SELECT expressions like
+				select `a`.`fp.fofId` - fix this*/
+
+			foreach($tokens as $key => $token) {
+				if($token[0] === '.') {
+					//this is one of the problematic tokens
+					$tokens[$key-1] .= $token;
+					unset($tokens[$key]);
+				}
+			}
+			/* reset the array if we deleted any tokens above */
+			$tokens = array_values($tokens);
+
 			return $tokens;
 	
 		}
@@ -1107,6 +1121,9 @@ EOREGEX
 			$prev_token = "";
 			$skip_next = false;
 			$sub_expr = "";
+
+			$processed = false;
+			$expr_type = false;
 	
 			$in_lists = array();
 			foreach($tokens as $key => $token) {
