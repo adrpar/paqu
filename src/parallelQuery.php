@@ -319,7 +319,7 @@ class ParallelQuery {
                 array_push($this->actualQueries, $shardCreateFedTable);
                 array_push($this->actualQueries, $shardActualQuery);
             } else if(preg_match('/\s*call\s*paquLinkTmp\s*\(\s*\'(.{1,}?)\'\s*\)\s*/i', $query, $matches)) {
-                $shardCreateFedTable = "SET @a := (SELECT GROUP_CONCAT(CONCAT(column_name, ' ', column_type)) FROM information_schema.COLUMNS " .
+                $shardCreateFedTable = "SET @a := (SELECT GROUP_CONCAT(CONCAT('`', column_name, '` ', column_type)) FROM information_schema.COLUMNS " .
                                         "WHERE TABLE_SCHEMA='" . $this->defDB . "' AND TABLE_NAME='" . $matches[1] . "');\n";
 
                 $shardCreateFedTable .= $query_id . " SELECT spider_bg_direct_sql(concat('CREATE DATABASE IF NOT EXISTS ". $this->defDB .
