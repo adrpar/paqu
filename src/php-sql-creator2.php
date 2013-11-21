@@ -399,7 +399,7 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
                 $oldToken = $v;
             }
 
-            $sql = $parsed['base_expr'] . "(" . trim($sql, "() ") . ")";
+            $sql = $parsed['base_expr'] . "(" . trim($sql, " ") . ")";
 
             if(array_key_exists('alias', $parsed)) {
                 $sql .= $this->processAlias($parsed['alias']);
