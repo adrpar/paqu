@@ -1171,6 +1171,7 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
 		} else if ($node['expr_type'] == "operator" && $key == count($table['where_cond']) - 1) {
 			continue;
 		} else if ($node['expr_type'] == "operator" && $node['base_expr'] == 'and') {
+			$oldOperatorNode = $node;
 			continue;
 		}
 
@@ -1180,12 +1181,11 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
 			//in rare cases this is needed, when things mingle too much.
 			//TODO: resolve the need for this!
 			array_push($toThisNode['WHERE'], $oldOperatorNode);
-		} else if ($operatorNode !== false) {
-			$first = false;
 		}
 		array_push($toThisNode['WHERE'], $node);
 
 		$oldOperatorNode = $operatorNode;
+		$first = false;
 	}
 }
 
