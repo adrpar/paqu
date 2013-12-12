@@ -127,6 +127,7 @@ class ShardQuery {
 
 		    switch ($clause['expr_type']) {
 				case 'expression':
+				case 'aggregate_function':
 				    if ($clause['sub_tree'][0]['expr_type'] == 'aggregate_function') {
 						$is_aggregate = true;
 						$skip_next = true;
@@ -273,6 +274,11 @@ class ShardQuery {
 								break;
 						}
 			    	} else {
+			    		//if this is a function without arguments, add the parenthesis
+			    		if(!strpos($base_expr, "(")) {
+			    			$base_expr .= "()";
+			    		}
+
 						$group[] = $pos + 1;
 						$group_aliases[] = $alias;
 
@@ -296,6 +302,11 @@ class ShardQuery {
 				case 'function':
 				    $group[] = $pos + 1;
 				    $group_aliases[] = $alias;
+
+		    		//if this is a function without arguments, add the parenthesis
+		    		if($clause['expr_type'] === 'function' && !strpos($base_expr, "(")) {
+		    			$base_expr .= "()";
+		    		}
 
 				    $shard_query .= $base_expr . ' AS ' . $alias;
 				    
@@ -942,6 +953,36 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 		}
 		return true;
     }
+
+    /**
+     * Function that will recursively go through the branch at the function to
+     * construct the escaped column name
+     * @param array $inNode SQL parse tree node
+     * @return string parts of the escaped function name
+     */
+    function buildEscapedString($inNode) {
+        $str = "";
+
+        foreach ($inNode as $currNode) {
+            $partStr = "";
+
+            if (array_key_exists("sub_tree", $currNode) && $currNode["sub_tree"] !== false) {
+                $partStr = $this->buildEscapedString($currNode["sub_tree"]);
+            }
+
+            $partStr = str_replace(".", "__", $partStr);
+
+            if ($currNode["expr_type"] === "aggregate_function" ||
+                    $currNode['expr_type'] === "function") {
+                $str .= $currNode["base_expr"] . "_" . $partStr;        #last "_" already added below
+            } else {
+                $str .= $currNode["base_expr"] . "_";
+            }
+        }
+
+        return $str;
+    }
+
 }
 
 function fix_trunc_parenth($string) {
