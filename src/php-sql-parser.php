@@ -158,7 +158,6 @@ if(!defined('HAVE_PHP_SQL_PARSER')) {
 		#this function splits up a SQL statement into easy to "parse"
 		#tokens for the SQL processor
 		private function split_sql($sql) {
-	
 				if(!is_string($sql)) {
 					echo "SQL:\n";
 					print_r($sql);
@@ -177,7 +176,7 @@ if(!defined('HAVE_PHP_SQL_PARSER')) {
 EOREGEX
 ;
 	
-		        $tokens = preg_split($regex, $sql,-1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+	        	$tokens = preg_split($regex, $sql,-1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 			$token_count = count($tokens);
 	
 			/* The above regex has one problem, because the parenthetical match is not greedy.
@@ -1346,7 +1345,6 @@ EOREGEX
 	*/
 	
 			if($mod) $expr=array_values($expr);
-	
 	
 			return $expr;
 		} 

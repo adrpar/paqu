@@ -1120,8 +1120,11 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 					}
 				}
 			}
-
-			$new_base_expr .= " " . $subnode['base_expr'];
+			if($subnode['expr_type'] === 'function' && strpos($subnode['base_expr'], "(") === false) {
+				$new_base_expr .= " " . $subnode['base_expr'] . "()";
+			} else {
+				$new_base_expr .= " " . $subnode['base_expr'];
+			}
 		}
 
 		$node['base_expr'] = "( " . $new_base_expr . " )";
@@ -1835,7 +1838,11 @@ function PHPSQLGroupWhereCond($sqlTree, &$tableList) {
 
 		#check if this is a condition with one or more participants
 		#trim () because we could be dealing with a column in a function
-		$table = explode(".", trim($currParticipants[0]['base_expr'], "()"));
+		if(empty($currParticipants)) {
+			$table = false;
+		} else {
+			$table = explode(".", trim($currParticipants[0]['base_expr'], "()"));
+		}
 		if (count($table) > 1) {
 			$table = $table[0];
 		} else {
@@ -2217,7 +2224,15 @@ function PHPSQLParseWhereTokens_createBaseExpr(&$currLeaf) {
 	//since recursive elements already processed above)
 	$currLeaf['base_expr'] = "( ";
 	foreach ($currLeaf['sub_tree'] as $node) {
-		$currLeaf['base_expr'] .= $node['base_expr'] . " ";
+		if($node['expr_type'] === 'function') {
+			if(strpos($node['base_expr'], "(") === false) {
+				$currLeaf['base_expr'] .= $node['base_expr'] . "() ";
+			} else {
+				$currLeaf['base_expr'] .= $node['base_expr'] . " ";
+			}
+		} else {
+			$currLeaf['base_expr'] .= $node['base_expr'] . " ";
+		}
 	}
 	$currLeaf['base_expr'] .= ")";
 }

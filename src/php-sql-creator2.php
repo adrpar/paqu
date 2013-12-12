@@ -369,36 +369,38 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
                 return "";
             }
 
-            if ($parsed['sub_tree'] === false) {
+/*            if ($parsed['sub_tree'] === false) {
                 return $parsed['base_expr'] . "()";
-            }
+            }*/
 
             $sql = "";
             $oldToken = NULL;
-            foreach ($parsed['sub_tree'] as $k => $v) {
-                if(!empty($oldToken) && $v['expr_type'] !== "operator" && $oldToken['expr_type'] !== "operator") {
-                    $sql .= ($this->isReserved($oldToken)  ? " " : ", ");
-                } else {
-                    $sql .= " ";
-                }
-                
-                $len = strlen($sql);
-                $sql .= $this->processReserved($v);
-                $sql .= $this->processSign($v);
-                $sql .= $this->processSelectExpression($v);
-                $sql .= $this->processOperator($v);
-                $sql .= $this->processFunction($v);
-                $sql .= $this->processConstant($v);
-                $sql .= $this->processColRef($v);
-                $sql .= $this->processReserved($v);
+            if (!empty($parsed['sub_tree'])) {
+                foreach ($parsed['sub_tree'] as $k => $v) {
+                    if(!empty($oldToken) && $v['expr_type'] !== "operator" && $oldToken['expr_type'] !== "operator") {
+                        $sql .= ($this->isReserved($oldToken)  ? " " : ", ");
+                    } else {
+                        $sql .= " ";
+                    }
+                    
+                    $len = strlen($sql);
+                    $sql .= $this->processReserved($v);
+                    $sql .= $this->processSign($v);
+                    $sql .= $this->processSelectExpression($v);
+                    $sql .= $this->processOperator($v);
+                    $sql .= $this->processFunction($v);
+                    $sql .= $this->processConstant($v);
+                    $sql .= $this->processColRef($v);
+                    $sql .= $this->processReserved($v);
 
-                if ($len == strlen($sql)) {
-                    throw new UnableToCreateSQLException('function subtree', $k, $v, 'expr_type');
-                }
+                    if ($len == strlen($sql)) {
+                        throw new UnableToCreateSQLException('function subtree', $k, $v, 'expr_type');
+                    }
 
-                $oldToken = $v;
+                    $oldToken = $v;
+                }
             }
-
+            
             $sql = $parsed['base_expr'] . "(" . trim($sql, " ") . ")";
 
             if(array_key_exists('alias', $parsed)) {
