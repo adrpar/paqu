@@ -1050,7 +1050,7 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 
 	#rewrite node to properly alias involved columns
 	if ($node['sub_tree'] !== false && $node['expr_type'] != "subquery") {
-		foreach ($node['sub_tree'] as &$subnode) {
+		foreach ($node['sub_tree'] as $key => &$subnode) {
 			if ($subnode['sub_tree'] !== false) {
 				PHPSQLrewriteAliasWhere($subnode, $tableList, $recLevel, $toThisNode);
 			}
@@ -1121,7 +1121,11 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 				}
 			}
 			if($subnode['expr_type'] === 'function' && strpos($subnode['base_expr'], "(") === false) {
-				$new_base_expr .= " " . $subnode['base_expr'] . "()";
+					if(!empty($node['sub_tree'][$key+1]) && strpos($node['sub_tree'][$key+1]['base_expr'], "(") === false) {
+						$new_base_expr .= " " . $subnode['base_expr'] . "()";
+					} else {
+						$new_base_expr .= " " . $subnode['base_expr'];
+					}
 			} else {
 				$new_base_expr .= " " . $subnode['base_expr'];
 			}
