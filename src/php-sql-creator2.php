@@ -413,6 +413,11 @@ if (!defined('HAVE_PHP_SQL_CREATOR')) {
                 return "";
             }
             $sql = $this->processSubTree($parsed, " ");
+
+            if(!empty($sql)) {
+                $sql = "(" . $sql . ")";
+            }
+
             $sql .= $this->processAlias($parsed['alias']);
             return $sql;
         }
