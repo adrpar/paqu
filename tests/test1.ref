@@ -1,0 +1,3 @@
+CALL paquExec('SELECT (x+y) AS `(x+y)` FROM MDR1.FOF ORDER BY NULL  LIMIT 0,10', 'aggregation_tmp_66208067')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `(x+y)` FROM `aggregation_tmp_66208067`    LIMIT 0,10
+CALL paquDropTmp('aggregation_tmp_66208067')
