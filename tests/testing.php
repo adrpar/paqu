@@ -3,10 +3,16 @@
 require_once '../src/parallelQuery.php';
 require_once '../src/mysqlii.php';
 
-function runTest($query, $refFile) {
+function runTest($query, $refFile = false) {
 	$paraQuery = runParaQuery($query);
 
 	$plan = $paraQuery->getParallelQueryPlan();
+ 
+	if($refFile === false) {
+		var_dump($plan);
+		die(0);
+	}
+
 	stripAggregate($plan);
 	removeSpace($plan);
 
