@@ -69,6 +69,10 @@ function loadReference($file) {
 
 function comparePlans($plan, $refPlan) {
 	if(count($plan) != count($refPlan)) {
+		echo "Too few rows:\nPlan:\n";
+		var_dump($plan);
+		echo "\nReference:\n";
+		var_dump($refPlan);
 		return false;
 	}
 

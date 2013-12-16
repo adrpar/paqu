@@ -1,0 +1,3 @@
+CALL paquExec('SELECT 0.25*(0.5+FLOOR(LOG10(Mvir)/0.25))  AS `log_mass`,COUNT(*) AS `num`,FLOOR(LOG10(Mvir)/0.25) AS `_FLOOR_LOG10_Mvir_/0__25__` FROM MDR1.BDMV WHERE (  snapnum = 85 )  GROUP BY FLOOR(LOG10(Mvir)/0.25)  ', 'aggregation_tmp_55099215')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `log_mass`,SUM(`num`) AS `num` FROM `aggregation_tmp_55099215`  GROUP BY `_FLOOR_LOG10_Mvir_/0__25__` ORDER BY `_FLOOR_LOG10_Mvir_/0__25__` ASC 
+CALL paquDropTmp('aggregation_tmp_55099215')

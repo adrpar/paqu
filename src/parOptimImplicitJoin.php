@@ -1268,6 +1268,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 
 				//find the correspinding column
 				$columnArray = array_merge($sqlTree['SELECT'], $toThisNode['SELECT']);
+				$node['alias'] = false;
 				foreach($columnArray as $column) {
 					if($column['base_expr'] === $parsed[0]['base_expr'] || $column['alias'] === $parsed[0]['base_expr']
 						 || strpos($column['base_expr'], "*") !== false) {
@@ -1283,7 +1284,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 							$currColName = $tmp[1];
 						}
 
-						if($currColTbl !== false && trim($currColTbl, "`") === trim($currTblName, "`")) {
+						if($currColTbl === false || trim($currColTbl, "`") === trim($currTblName, "`")) {
 							//process this order by...
 							$node['alias'] = $parsed[0]['alias'];
 						} else if (strpos($column['base_expr'], "*") !== false) {
@@ -1293,6 +1294,12 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 							continue 2;
 						}
 					}
+				}
+
+				//if we endup here, this is a column that was not aliased and not found in the SELECT list
+				//use this if it has no reference to a table
+				if(strpos($parsed[0]['alias'], ".") === false) {
+					$node['alias'] = $parsed[0]['alias'];
 				}
 			}
 
