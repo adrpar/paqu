@@ -835,7 +835,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 						$order_by_coord .= ",";
 				    
 				    #check if order by arguemnt is just a number. if yes, we dont need to quote this
-				    if(is_numeric(trim($o['alias'], "`"))) {
+				    if(!empty($o['alias']) && is_numeric(trim($o['alias'], "`"))) {
 						$o['alias'] = trim($o['alias'], "`");
 				    }
 				    

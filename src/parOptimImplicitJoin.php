@@ -384,11 +384,9 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 	PHPSQLaddOuterQueryFrom($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
 	#link to the tree
-	if ($currInnerNode !== false) {
+	if ($currInnerNode !== false && $currInnerNode['sub_tree'] !== false) {
 		linkInnerQueryToOuter($currOuterQuery, $currInnerNode, $tableList, $recLevel);
 	}
-	$currDepQueryNode['sub_tree'] = $currOuterQuery;
-
 
 	PHPSQLaddOuterQueryUpdate($sqlTree, $table, $currOuterQuery);
 
@@ -422,6 +420,8 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 	#resort the table list, now taking all the dependant queries for which data is already gathered into account
 	#dependant queries will have higher priorities than other constraints
 	PHPSQLresortCondTableList($tableList, $dependantWheres, $recLevel);
+
+	$currDepQueryNode['sub_tree'] = $currOuterQuery;
 
 	#the upper most node is not a subquery of course...
 	if ($recLevel == 0) {
@@ -1035,13 +1035,12 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 	$new_base_expr = "";
 
 	$listOfCols = array();
-	if ($toThisNode !== false) {
+	if ($toThisNode !== false && $toThisNode['sub_tree'] !== false) {
 		if(empty($toThisNode['sub_tree']['SELECT'])) {
 			//TODO: Solve quick fix - introduced through this query:
 			//select `b`.x, `b`.y, `b`.z, `b`.vx, `b`.vy, `b`.vz from Bolshoi.particles416 as `b`, (select x, y, z from Bolshoi.BDMV where snapnum=416 order by Mvir desc limit 1) as `a` where b.x between a.x - 25 and a.x + 25 and b.y between a.y - 25 and a.y + 25 and b.z > a.z-25
 			$toThisNode['sub_tree']['SELECT'] = $toThisNode['sub_tree']['FROM'][0]['sub_tree']['SELECT'];
 		}
-
 
 		foreach ($toThisNode['sub_tree']['SELECT'] as $selNode) {
 			array_push($listOfCols, $selNode);
@@ -1232,7 +1231,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 		$node['base_expr'] = str_replace("DESC", "", $node['base_expr']);
 		$node['base_expr'] = trim($node['base_expr']);
 
-		#parse the group by (since the parser somehow messes up)
+		#parse the order by (since the parser somehow messes up)
 		$phpParse = new PHPSQLParserOld();
 		$parsed = array();
 		$parsed[0] = $phpParse->process_select_expr($node['base_expr']);
@@ -1255,7 +1254,46 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 			}
 
 			if ($find === false) {
-				$node['alias'] = $parsed[0]['alias'];
+				//it might be, that this column is actually a column referencing another table than the one beeing processed
+				//now. so go through the list of columns selected, and see if this is the case, otherwise add the column
+				$currTblAlias = $toThisNode['FROM'][0]['alias'];
+				$tmp = explode('.', $currTblAlias);
+				if (count($tmp) == 1) {
+					$currTblDb = false;
+					$currTblName = $tmp[0];
+				} else {
+					$currTblDb = $tmp[0];
+					$currTblName = $tmp[1];
+				}
+
+				//find the correspinding column
+				$columnArray = array_merge($sqlTree['SELECT'], $toThisNode['SELECT']);
+				foreach($columnArray as $column) {
+					if($column['base_expr'] === $parsed[0]['base_expr'] || $column['alias'] === $parsed[0]['base_expr']
+						 || strpos($column['base_expr'], "*") !== false) {
+						//found!
+						//compare with currently processed table
+						$currColExpr = $column['base_expr'];
+						$tmp = explode('.', $currColExpr);
+						if (count($tmp) == 1) {
+							$currColTbl = false;
+							$currColName = $tmp[0];
+						} else {
+							$currColTbl = $tmp[0];
+							$currColName = $tmp[1];
+						}
+
+						if($currColTbl !== false && trim($currColTbl, "`") === trim($currTblName, "`")) {
+							//process this order by...
+							$node['alias'] = $parsed[0]['alias'];
+						} else if (strpos($column['base_expr'], "*") !== false) {
+							//select ALL columns could match the next one as well... continue looking
+							continue 1;
+						} else {
+							continue 2;
+						}
+					}
+				}
 			}
 
 			#check if this column already exists in the select tree

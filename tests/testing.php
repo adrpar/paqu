@@ -74,6 +74,8 @@ function comparePlans($plan, $refPlan) {
 
 	foreach($plan as $key => $line) {
 		if($line !== $refPlan[$key]) {
+			echo "Line\n" . $line . "\n";
+			echo "does not match the reference\n" . $refPlan[$key] . "\n";
 			return false;
 		}
 	}
