@@ -1,0 +1,5 @@
+CALL paquExec('SELECT fofTreeId AS `fofTreeId`,lastProgId AS `lastProgId` FROM MDR1.FOFMtree AS `descend` WHERE ( descend.fofTreeId = 85000000000 )  ', 'aggregation_tmp_30567491')
+CALL paquExec('SELECT prog.*() AS `prog.*`,prog.fofTreeId AS `prog.fofTreeId` FROM MDR1.FOFMtree AS `prog` JOIN ( SELECT `fofTreeId`,`lastProgId` FROM `aggregation_tmp_30567491`   ) AS `descend`  WHERE (  prog.fofTreeId BETWEEN `descend`.`fofTreeId` AND `descend`.`lastProgId` )   ', 'aggregation_tmp_45908099')
+CALL paquDropTmp('aggregation_tmp_30567491')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `prog.*`,`prog.fofTreeId` FROM `aggregation_tmp_45908099`  ORDER BY `prog.fofTreeId` ASC
+CALL paquDropTmp('aggregation_tmp_45908099')

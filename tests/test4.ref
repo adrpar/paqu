@@ -1,0 +1,3 @@
+CALL paquExec('SELECT rand(3)  AS `random` FROM MDR1.Particles62 ORDER BY NULL  LIMIT 0,100', 'aggregation_tmp_79197060')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `random` FROM `aggregation_tmp_79197060`    LIMIT 0,100
+CALL paquDropTmp('aggregation_tmp_79197060')

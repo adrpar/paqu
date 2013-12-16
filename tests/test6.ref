@@ -1,0 +1,3 @@
+CALL paquExec('SELECT particleId AS `particleId`,x AS `x`,y AS `y`,z AS `z`,vx AS `vx`,vy AS `vy`,vz AS `vz` FROM MDR1.Particles62 WHERE (  RAND (3) <= 0.0006 )    LIMIT 0,100', 'aggregation_tmp_13694406')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `particleId`,`x`,`y`,`z`,`vx`,`vy`,`vz` FROM `aggregation_tmp_13694406`    LIMIT 0,100
+CALL paquDropTmp('aggregation_tmp_13694406')
