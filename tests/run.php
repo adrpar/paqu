@@ -36,9 +36,10 @@ echo runTest("SELECT 0.25*(0.5+FLOOR(LOG10(Mvir)/0.25)) AS log_mass, COUNT(*) AS
 echo "Test 11\n";
 echo runTest("SELECT Bolshoi.BDMVProf.bdmProfileId as `Bolshoi__BDMVProf__bdmProfileId`,Bolshoi.BDMVProf.bdmId as `Bolshoi__BDMVProf__bdmId`,Bolshoi.BDMVProf.snapnum as `Bolshoi__BDMVProf__snapnum`,Bolshoi.BDMVProf.NinCat as `Bolshoi__BDMVProf__NinCat`,Bolshoi.BDMVProf.R_Rvir as `Bolshoi__BDMVProf__R_Rvir`,Bolshoi.BDMVProf.Rbin as `Bolshoi__BDMVProf__Rbin`,Bolshoi.BDMVProf.np as `Bolshoi__BDMVProf__np`,Bolshoi.BDMVProf.mass as `Bolshoi__BDMVProf__mass`,Bolshoi.BDMVProf.dens as `Bolshoi__BDMVProf__dens`,Bolshoi.BDMVProf.Vcirc as `Bolshoi__BDMVProf__Vcirc`,Bolshoi.BDMVProf.VpropRms as `Bolshoi__BDMVProf__VpropRms`,Bolshoi.BDMVProf.Vrad as `Bolshoi__BDMVProf__Vrad`,Bolshoi.BDMVProf.VradRms as `Bolshoi__BDMVProf__VradRms`,Bolshoi.BDMVProf.boundR_Rvir as `Bolshoi__BDMVProf__boundR_Rvir`,Bolshoi.BDMVProf.boundNp as `Bolshoi__BDMVProf__boundNp`,Bolshoi.BDMVProf.boundMass as `Bolshoi__BDMVProf__boundMass`,Bolshoi.BDMVProf.boundDens as `Bolshoi__BDMVProf__boundDens`,Bolshoi.BDMVProf.boundVcirc as `Bolshoi__BDMVProf__boundVcirc`,Bolshoi.BDMVProf.boundVcircRms as `Bolshoi__BDMVProf__boundVcircRms`,Bolshoi.BDMVProf.boundVrad as `Bolshoi__BDMVProf__boundVrad`,Bolshoi.BDMVProf.boundVradRms as `Bolshoi__BDMVProf__boundVradRms` FROM Bolshoi.BDMVProf WHERE bdmId = (SELECT bdmId FROM Bolshoi.BDMV WHERE snapnum=416 ORDER BY Mvir DESC LIMIT 1) ORDER BY `Bolshoi__BDMVProf__Rbin` ASC", "test11.ref");
 
+echo "Test 12\n";
+echo runTest("SELECT f.x,f.y,f.z, b.x,b.y,b.z FROM MDR1.FOF AS f, MDR1.BDMV AS b WHERE POWER(b.x-f.x,2) < 1000 limit 1", "test12.ref");
 
+echo "Test 13\n";
+echo runTest("SELECT p.particleId,p.x,p.y,p.z FROM (SELECT x AS haloX, y AS haloY, z AS haloZ, Rvir AS hR FROM MDR1.BDMV WHERE bdmId = 6200000001) AS h, MDR1.Particles62 AS p WHERE POWER(h.haloX-p.x,2) + POWER(h.haloY-p.y,2) + POWER(h.haloZ-p.z,2) <= h.hR*h.hR", "test13.ref");
 
 ?>
-
-
-

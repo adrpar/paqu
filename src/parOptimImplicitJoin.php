@@ -764,94 +764,94 @@ array_push($toThisNode['FROM'], $currAgrParentNode);
  * recLevel.
  */
 function PHPSQLresortCondTableList(&$tableList, &$dependantWheres, &$recLevel) {
-		#build a list of all possible remaining combinations and count dependant queries
-		#is there still something remaining??
+	#build a list of all possible remaining combinations and count dependant queries
+	#is there still something remaining??
 	if ($recLevel == 0) {
-	 return;
- }
+		return;
+	}
 
-		#generate a list of a possible combination that will be passed on to the tree
-		#walker that will count the number of dependand where clases addressable with the
-		#given test combination - the ones above $recLevel will always remain the same,
-		#only the first entry will change:
- $possibleComb = array();
- $possibleComb[0] = -1;
+	#generate a list of a possible combination that will be passed on to the tree
+	#walker that will count the number of dependand where clases addressable with the
+	#given test combination - the ones above $recLevel will always remain the same,
+	#only the first entry will change:
+	$possibleComb = array();
+	$possibleComb[0] = -1;
 
-		#add the tables that have already been processed to the current test combination 
-		#these will allways remain the same
- $count = 0;
- foreach ($tableList as $key => $table) {
-	 if ($key >= $recLevel) {
-		 $count++;
-		 $possibleComb[$count] = $key;
-	 }
- }
+	#add the tables that have already been processed to the current test combination 
+	#these will allways remain the same
+	$count = 0;
+	foreach ($tableList as $key => $table) {
+		if ($key >= $recLevel) {
+			$count++;
+			$possibleComb[$count] = $key;
+		}
+	}
 
- $combCountList = array();
- $combPartList = array();
- foreach ($tableList as $key => $table) {
-	#skip the ones we already processed
-	 if ($key >= $recLevel) {
-		 continue;
-	 }
+	$combCountList = array();
+	$combPartList = array();
+	foreach ($tableList as $key => $table) {
+		#skip the ones we already processed
+		if ($key >= $recLevel) {
+			continue;
+		}
 
-	 $possibleComb[0] = $key;
+		$possibleComb[0] = $key;
 
-	 $combPartList[$key] = PHPSQLgetDepWhereConds($tableList, $dependantWheres, $possibleComb);
-	 $combCountList[$key] = count($combPartList[$key]);
- }
+		$combPartList[$key] = PHPSQLgetDepWhereConds($tableList, $dependantWheres, $possibleComb);
+		$combCountList[$key] = count($combPartList[$key]);
+	}
 
-		#now choose the one to take
- $maxKey = -1;
- $maxCount = -1;
- foreach ($combCountList as $key => $value) {
-	 if ($value >= $maxCount) {
-		 $maxCount = $value;
-		 $maxKey = $key;
-	 }
- }
+	#now choose the one to take
+	$maxKey = -1;
+	$maxCount = -1;
+	foreach ($combCountList as $key => $value) {
+		if ($value >= $maxCount) {
+			$maxCount = $value;
+			$maxKey = $key;
+		}
+	}
 
-		#add the dependant queries to the table and remove from the dependant list
- if (!array_key_exists('where_cond', $tableList[$maxKey])) {
-	 $tableList[$maxKey]['where_cond'] = array();
- }
+	#add the dependant queries to the table and remove from the dependant list
+	if (!array_key_exists('where_cond', $tableList[$maxKey])) {
+		$tableList[$maxKey]['where_cond'] = array();
+	}
 
- $tableList[$maxKey]['where_cond'] = array_merge($tableList[$maxKey]['where_cond'], $combPartList[$maxKey]);
- foreach ($combPartList[$maxKey] as $node) {
-	 $key = array_search($node, $dependantWheres);
-	 unset($dependantWheres[$key]);
- }
+	$tableList[$maxKey]['where_cond'] = array_merge($tableList[$maxKey]['where_cond'], $combPartList[$maxKey]);
+	foreach ($combPartList[$maxKey] as $node) {
+		$key = array_search($node, $dependantWheres);
+		unset($dependantWheres[$key]);
+	}
 
-		#add the columns that make up the dependant wheres to the table
- foreach ($combPartList[$maxKey] as $node) {
-	 $listOfParticipants = PHPSQLGetListOfParticipants($node);
+	#add the columns that make up the dependant wheres to the table
+	foreach ($combPartList[$maxKey] as $node) {
+		$listOfParticipants = PHPSQLGetListOfParticipants($node);
 
-	#check which one we still need to add to the list of columns
-	 foreach ($listOfParticipants as $col) {
-		 $tmp = explode('.', $col['base_expr']);
+		#check which one we still need to add to the list of columns
+		foreach ($listOfParticipants as $col) {
+			$tmp = explode('.', $col['base_expr']);
 
-		 if ($tmp[0] == $tableList[$maxKey]['alias']) {
-			$tmpCol['expr_type'] = $col['expr_type'];
-			$tmpCol['alias'] = '`' . $col['base_expr'] . '`';
-			$tmpCol['base_expr'] = $col['base_expr'];
-			$tmpCol['sub_tree'] = $col['sub_tree'];
+			if ($tmp[0] == $tableList[$maxKey]['alias']) {
+				$tmpCol['expr_type'] = $col['expr_type'];
+				$tmpCol['alias'] = '`' . $col['base_expr'] . '`';
+				$tmpCol['base_expr'] = $col['base_expr'];
+				$tmpCol['sub_tree'] = $col['sub_tree'];
 
-			$col['sub_tree'] = false;
-			$key = array_search($tmpCol, $tableList[$maxKey]['sel_columns']);
+				$col['sub_tree'] = false;
+				$key = array_search($tmpCol, $tableList[$maxKey]['sel_columns']);
 
-			if ($key === false) {
-				array_push($tableList[$maxKey]['sel_columns'], $col);
+				if ($key === false) {
+					array_push($tableList[$maxKey]['sel_columns'], $col);
+				}
 			}
 		}
 	}
-}
 
-		#exchange the two tables
-if ($maxKey != $recLevel - 1) {
-	$tmp = $tableList[$recLevel - 1];
-	$tableList[$recLevel - 1] = $tableList[$maxKey];
-	$tableList[$maxKey] = $tmp;
-}
+	#exchange the two tables
+	if ($maxKey != $recLevel - 1) {
+		$tmp = $tableList[$recLevel - 1];
+		$tableList[$recLevel - 1] = $tableList[$maxKey];
+		$tableList[$maxKey] = $tmp;
+	}
 }
 
 /**
@@ -870,29 +870,30 @@ function PHPSQLgetDepWhereConds($tableList, $dependantWheres, $possibleCombList)
 	$outArray = array();
 
 	if (empty($dependantWheres)) {
-	 return $outArray;
- }
+		return $outArray;
+	}
 
- foreach ($dependantWheres as $node) {
-	 $listOfParticipants = PHPSQLGetListOfParticipants($node);
+	foreach ($dependantWheres as $node) {
+		$listOfParticipants = PHPSQLGetListOfParticipants($node);
 
-	 $count = 0;
-	 foreach ($listOfParticipants as $part) {
-		 $currTable = explode(".", $part['base_expr']);
-		 $currTable = $currTable[0];
-		 foreach ($possibleCombList as $key) {
-			if (trim($tableList[$key]['alias'], "`") == trim($currTable, "`")) {
-				$count++;
-				break;
+		$count = 0;
+		foreach ($listOfParticipants as $part) {
+			$currTable = explode(".", $part['base_expr']);
+			$currTable = $currTable[0];
+			foreach ($possibleCombList as $key) {
+				if (trim($tableList[$key]['alias'], "`") == trim($currTable, "`")) {
+					$count++;
+					break;
+				}
 			}
 		}
-	}
-	if ($count == count($listOfParticipants)) {
-	 array_push($outArray, $node);
- }
-}
 
-return $outArray;
+		if ($count == count($listOfParticipants)) {
+			array_push($outArray, $node);
+		}
+	}
+
+	return $outArray;
 }
 
 /**
@@ -1055,6 +1056,12 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 			}
 
 			if ($subnode['expr_type'] == 'colref') {
+				//handle "," that end up here in functions with multiple variables - just ignore them
+				if($subnode['base_expr'] === ",") {
+					$new_base_expr .= $subnode['base_expr'];
+					continue;
+				}
+
 				$tmp = explode('.', $subnode['base_expr']);
 				if (count($tmp) < 1) {
 					$currTable = false;
@@ -1147,6 +1154,8 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
  */
 function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, $recLevel, &$currInnerNode) {
 	if (empty($table['where_cond'])) {
+		$toThisNode['WHERE'] = array();
+		unset($toThisNode['WHERE']);
 		return;
 	}
 
@@ -1947,48 +1956,42 @@ function PHPSQLGetListOfParticipants($node) {
 	$partArray = array();
 
 	if (is_array($node['sub_tree'])) {
-	#handle subqueries in WHERE statements differntly
-	 if ($node['expr_type'] == 'subquery') {
-		 
-	 } else {
-		 foreach ($node['sub_tree'] as $subTreeNode) {
-			$currParticipants = PHPSQLGetListOfParticipants($subTreeNode);
+		#handle subqueries in WHERE statements differntly
+		if ($node['expr_type'] == 'subquery') {
 
-			if (is_array($currParticipants)) {
-				foreach($currParticipants as $currNode) {
-					$found = false;
-					foreach($partArray as $currPartNode) {
-						if($currNode['base_expr'] === $currPartNode['base_expr']) {
-							$found = true;
-							break;
+		} else {
+			foreach ($node['sub_tree'] as $subTreeNode) {
+				$currParticipants = PHPSQLGetListOfParticipants($subTreeNode);
+
+				if (is_array($currParticipants)) {
+					foreach($currParticipants as $currNode) {
+						//handle "," that can show up in functions terms and skip them
+						if($currNode['base_expr'] === ",") {
+							continue;
 						}
-					}
 
-					if($found === false) {
-						array_push($partArray, $currNode);
+						$found = false;
+						foreach($partArray as $currPartNode) {
+							if($currNode['base_expr'] === $currPartNode['base_expr']) {
+								$found = true;
+								break;
+							}
+						}
+
+						if($found === false) {
+							array_push($partArray, $currNode);
+						}
 					}
 				}
 			}
 		}
-	}
-} else if ($node['expr_type'] === "colref") {
-	//check if this partner is already in the list
-	$found = false;
-	foreach($partArray as $currNode) {
-		if($currNode['base_expr'] === $node['base_expr']) {
-			$found = true;
-			break;
-		}
-	}
-
-	if($found === false) {
+	} else if ($node['expr_type'] === "colref") {
 		array_push($partArray, $node);
+	} else {
+		$partArray = NULL;
 	}
-} else {
-	$partArray = NULL;
-}
 
-return $partArray;
+	return $partArray;
 }
 
 /**
