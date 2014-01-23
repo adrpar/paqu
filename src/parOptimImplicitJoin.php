@@ -1037,7 +1037,8 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 
 	$listOfCols = array();
 	if ($toThisNode !== false && $toThisNode['sub_tree'] !== false) {
-		if(empty($toThisNode['sub_tree']['SELECT'])) {
+		//if(empty($toThisNode['sub_tree']['SELECT'])) {
+		if(!empty($toThisNode['sub_tree']['FROM'][0]['sub_tree'])) {
 			//TODO: Solve quick fix - introduced through this query:
 			//select `b`.x, `b`.y, `b`.z, `b`.vx, `b`.vy, `b`.vz from Bolshoi.particles416 as `b`, (select x, y, z from Bolshoi.BDMV where snapnum=416 order by Mvir desc limit 1) as `a` where b.x between a.x - 25 and a.x + 25 and b.y between a.y - 25 and a.y + 25 and b.z > a.z-25
 			$toThisNode['sub_tree']['SELECT'] = $toThisNode['sub_tree']['FROM'][0]['sub_tree']['SELECT'];
@@ -1082,8 +1083,11 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 					if ($tblKey > $recLevel) {
 						#rewrite name of where_node to properly alias it
 						#rewrite name to alias name if needed
+
+//						var_dump($listOfCols);
+//						var_dump($currCol);
 						foreach ($listOfCols as $selNode) {
-							if (trim($selNode['base_expr'], ' ') == $currCol) {
+							if (trim($selNode['base_expr'], ' ') == $currCol || trim($selNode['alias'], '` ') == $currCol) {
 								$tmp = explode(".", trim($selNode['alias'], '`'));
 								if (count($tmp) > 1) {
 									#search for proper name in the subquery tree
@@ -1123,6 +1127,7 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 						}
 
 						$subnode['base_expr'] = '`' . trim($tableList[$tblKey]['alias'], "`") . '`.`' . $subnode['base_expr'] . '`';
+						//$subnode['base_expr'] = '`' . $subnode['base_expr'] . '`';
 					}
 				}
 			}
@@ -1694,12 +1699,12 @@ function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList,
 		return;
 	}
 
-	$tmpList1 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], $tblAlias);
-	$tmpList2 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], $tblName);
+	$tmpList1 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], $tblAlias, false);
+	$tmpList2 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], $tblName, true);
 
 	//this handles (crudely) the case, when no alias is given to the DB
 	if($table['name'] == $table['alias']) {
-		$tmpList3 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], "");
+		$tmpList3 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], "", true);
 		$tmpList2 = array_merge($tmpList2, $tmpList3);
 	}
  
@@ -1727,18 +1732,19 @@ function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList,
  * @brief Extracts all the participating columns from the WHERE tree for a given table
  * @param whereTree the WHERE part of the SQL tree
  * @param table currently treated table
+ * @param remove the table identifier infront of the name
  * @return array with participating columns
  * 
  * Extracts all the participating columns from the WHERE tree for a given table and returns
  * an array with all the columns. It also strips the involved columns from the table / alias
  * name.
  */
-function PHPSQLgetAllColsFromWhere($whereTree, $table) {
+function PHPSQLgetAllColsFromWhere($whereTree, $table, $removeTableName) {
 	$returnArray = array();
 
 	foreach ($whereTree as $node) {
 		if (is_array($node['sub_tree']) && $node['expr_type'] != "subquery") {
-			$tmpArray = PHPSQLgetAllColsFromWhere($node['sub_tree'], $table);
+			$tmpArray = PHPSQLgetAllColsFromWhere($node['sub_tree'], $table, $removeTableName);
 			$returnArray = array_merge($returnArray, $tmpArray);
 		}
 
@@ -1750,7 +1756,7 @@ function PHPSQLgetAllColsFromWhere($whereTree, $table) {
 
 		#getting rid of the table/alias name in the column description (but only if a table
 		#name is provided $table)
-		if(!empty($table) && count($tmp) > 1) {
+		if(!empty($table) && count($tmp) > 1 && $removeTableName === true) {
 			$node['base_expr'] = implode(".", array_slice($tmp, 1));
 		}
 

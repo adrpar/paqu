@@ -1,5 +1,5 @@
-  CALL paquExec('SELECT f.x AS `f.x`,f.y AS `f.y`,f.z AS `f.z`,x AS `x` FROM MDR1.FOF AS `f` ORDER BY NULL ', 'aggregation_tmp_17638758')
-  CALL paquExec('SELECT b.x AS `b.x`,b.y AS `b.y`,b.z AS `b.z`,`f`.`f.x` AS `f.x`,`f`.`f.y` AS `f.y`,`f`.`f.z` AS `f.z` FROM MDR1.BDMV AS `b` JOIN ( SELECT `f.x`,`f.y`,`f.z`,`x` FROM `aggregation_tmp_17638758`   ) AS `f`  WHERE (  POWER (  b.x - `f`.`x`, 2 ) < 1000 )    LIMIT 0,1', 'aggregation_tmp_62463573')
-  CALL paquDropTmp('aggregation_tmp_17638758')
-  USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `b.x`,`b.y`,`b.z`,`f.x`,`f.y`,`f.z` FROM `aggregation_tmp_62463573`    LIMIT 0,1
-  CALL paquDropTmp('aggregation_tmp_62463573')
+CALL paquExec('SELECT f.x AS `f.x`,f.y AS `f.y`,f.z AS `f.z` FROM MDR1.FOF AS `f` ORDER BY NULL ', 'aggregation_tmp_28157408')
+CALL paquExec('SELECT b.x AS `b.x`,b.y AS `b.y`,b.z AS `b.z`,`f`.`f.x` AS `f.x`,`f`.`f.y` AS `f.y`,`f`.`f.z` AS `f.z` FROM MDR1.BDMV AS `b` JOIN ( SELECT `f.x`,`f.y`,`f.z` FROM `aggregation_tmp_28157408`   ) AS `f`  WHERE (  POWER (  b.x - `f`.`f.x`, 2 ) < 1000 )    LIMIT 0,1', 'aggregation_tmp_8863723')
+CALL paquDropTmp('aggregation_tmp_28157408')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `b.x`,`b.y`,`b.z`,`f.x`,`f.y`,`f.z` FROM `aggregation_tmp_8863723`    LIMIT 0,1
+CALL paquDropTmp('aggregation_tmp_8863723')
