@@ -1185,7 +1185,7 @@ function PHPSQLaddOuterQueryWhere(&$sqlTree, &$table, &$toThisNode, $tableList, 
 			$operatorNode = $node['operator'];
 		} else if ($node['expr_type'] == "operator" && $key == count($table['where_cond']) - 1) {
 			continue;
-		} else if ($node['expr_type'] == "operator" && $node['base_expr'] == 'and') {
+		} else if ($node['expr_type'] == "operator" && strtolower($node['base_expr']) == 'and') {
 			$oldOperatorNode = $node;
 			continue;
 		}
