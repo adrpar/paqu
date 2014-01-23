@@ -42,4 +42,7 @@ echo runTest("SELECT f.x,f.y,f.z, b.x,b.y,b.z FROM MDR1.FOF AS f, MDR1.BDMV AS b
 echo "Test 13\n";
 echo runTest("SELECT p.particleId,p.x,p.y,p.z FROM (SELECT x AS haloX, y AS haloY, z AS haloZ, Rvir AS hR FROM MDR1.BDMV WHERE bdmId = 6200000001) AS h, MDR1.Particles62 AS p WHERE POWER(h.haloX-p.x,2) + POWER(h.haloY-p.y,2) + POWER(h.haloZ-p.z,2) <= h.hR*h.hR", "test13.ref");
 
+echo "Test 14\n";
+echo runTest("SELECT PROG.mass, PROG.treeSnapnum, DES.mass, DES.treeSnapnum, DES.fofId, PROG.fofId, DES.lastProgId FROM MDR1.FOFMtree AS PROG, MDR1.FOFMtree AS DES WHERE DES.treeSnapnum=39 AND PROG.fofTreeId BETWEEN DES.fofTreeId AND DES.lastProgId AND PROG.mass > 1.e13 ORDER BY DES.fofId", "test14.ref");
+
 ?>

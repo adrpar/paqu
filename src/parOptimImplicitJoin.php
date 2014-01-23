@@ -134,7 +134,7 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 	$dependantList = PHPSQLGroupWhereCond($newSqlTree, $listOfTables);
 
 	PHPSQLCountWhereConditions($listOfTables);
-	$listOfTables = PHPSQLdetStartTable($listOfTables, $headNodeTables);
+	$listOfTables = PHPSQLdetStartTable($listOfTables, $headNodeTables, $dependantList);
 
 	$nestedQuery = PHPSQLbuildNestedQuery($newSqlTree, $listOfTables, $dependantList, 0);
 
@@ -1777,11 +1777,12 @@ function PHPSQLgetAllColsFromWhere($whereTree, $table) {
  * order (the outer query is assumend to be least selective). The recursive SQL generation algorithm will then
  * go through the list sequentially in the given order.
  */
-function PHPSQLdetStartTable($tableList, $headNodeTables = array()) {
+function PHPSQLdetStartTable($tableList, $headNodeTables = array(), $dependantList = array()) {
 	$maxVal = -1;
 	$currTable = NULL;
 
-		#sort the table and return
+
+	#sort the table and return
 	$condCount = array();
 	foreach ($tableList as $key => $table) {
 	 if ($table['name'] != "DEPENDENT-SUBQUERY") {
@@ -1797,6 +1798,13 @@ function PHPSQLdetStartTable($tableList, $headNodeTables = array()) {
 				break;
 			}
 		 }
+
+		 //go through the dependant list and add another point to each table that shows up on the right of a
+		 //between query - there it makes sense to rank the table somewhat higher
+		 if(!empty($dependantList)) {
+		 	$condCount[$key] += PHPSQLdetStartTableCountBetween($dependantList, $table['alias']);
+		 	$condCount[$key] += PHPSQLdetStartTableCountBetween($dependantList, $table['name']);
+		 }
 	 } else {
 		 $condCount[$key] = 999999;
 	 }
@@ -1805,6 +1813,28 @@ function PHPSQLdetStartTable($tableList, $headNodeTables = array()) {
  array_multisort($condCount, SORT_ASC, $tableList);
 
  return $tableList;
+}
+
+function PHPSQLdetStartTableCountBetween($nodes, $tableName) {
+	$count = 0;
+	$found = false;
+
+	foreach($nodes as $node) {
+		if(!empty($node['sub_tree'])) {
+			$count += PHPSQLdetStartTableCountBetween($node['sub_tree'], $tableName);
+		}
+
+		if($node['expr_type'] === "operator" && $node['base_expr'] === "BETWEEN") {
+			$found = true;
+		} else if ($found === true) {
+			//check if this is a column of the current table
+			if(strpos($node['base_expr'], $tableName) !== false) {
+				$count += 1;
+			}
+		}
+	}
+
+	return $count;
 }
 
 /**
