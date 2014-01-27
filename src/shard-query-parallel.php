@@ -388,12 +388,28 @@ class ShardQuery {
 
 						//check if this table is only available on the head node
 						//if yes, donot execute the query in parallel
-						foreach($this->headNodeTables as $headNodeTable) {
-							if(strpos($fromNode['table'], $headNodeTable) !== false) {
-								$parallel = false;
-								break;
-							}
-						}
+						 //Quick fast check for this
+				 	 	 $posDot = strpos($fromNode['table'], ".");
+				 	 	 $found = false;
+						 foreach($this->headNodeTables as $headNodeTable) {
+						 	$posTable = strpos($fromNode['table'], $headNodeTable);
+						 	if($posTable !== false) {
+						 		if($posDot === false) {
+						 			if(strlen($fromNode['table']) === strlen($headNodeTable)) {
+						 				$found = true;
+						 			}
+						 		} else {
+						 			if(strlen($fromNode['table']) - $posDot === strlen($headNodeTable)) {
+						 				$found = true;
+						 			}
+						 		}
+
+						 		if($found === true) {
+									$parallel = false;
+									break;
+						 		}
+						 	}
+						 }
 				    }
 				}
 

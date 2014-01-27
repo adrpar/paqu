@@ -45,4 +45,9 @@ echo runTest("SELECT p.particleId,p.x,p.y,p.z FROM (SELECT x AS haloX, y AS halo
 echo "Test 14\n";
 echo runTest("SELECT PROG.mass, PROG.treeSnapnum, DES.mass, DES.treeSnapnum, DES.fofId, PROG.fofId, DES.lastProgId FROM MDR1.FOFMtree AS PROG, MDR1.FOFMtree AS DES WHERE DES.treeSnapnum=39 AND PROG.fofTreeId BETWEEN DES.fofTreeId AND DES.lastProgId AND PROG.mass > 1.e13 ORDER BY DES.fofId", "test14.ref");
 
+echo "Test 15\n";
+echo runTest("SELECT i from barbar WHERE i=1;", "test15.ref");
+
+echo "Test 16\n";
+echo runTest("SELECT i from bar WHERE i=1;", "test16.ref");
 ?>

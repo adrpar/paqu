@@ -1795,14 +1795,27 @@ function PHPSQLdetStartTable($tableList, $headNodeTables = array(), $dependantLi
 		 $condCount[$key] = $table['cond_count'];
 
 		 //check if this is a table that is only on the head node
-		 //TODO: make smarter check... (at the moment checking if table name is included in one or the other,
-		 //this also allows definition of complete database and will consider this if database is given in table
-		 //name)
+		 //Quick fast check for this
+ 	 	 $posDot = strpos($table['name'], ".");
+ 	 	 $found = false;
 		 foreach($headNodeTables as $headNodeTable) {
-			if(strpos($table['name'], $headNodeTable) !== false) {
-				$condCount[$key] = 99999999 + $table['cond_count'];
-				break;
-			}
+		 	$posTable = strpos($table['name'], $headNodeTable);
+		 	if($posTable !== false) {
+		 		if($posDot === false) {
+		 			if(strlen($table['name']) === strlen($headNodeTable)) {
+		 				$found = true;
+		 			}
+		 		} else {
+		 			if(strlen($table['name']) - $posDot === strlen($headNodeTable)) {
+		 				$found = true;
+		 			}
+		 		}
+
+		 		if($found === true) {
+					$condCount[$key] = 99999999 + $table['cond_count'];
+					break;
+		 		}
+		 	}
 		 }
 
 		 //go through the dependant list and add another point to each table that shows up on the right of a
