@@ -81,17 +81,20 @@ function PHPSQLprepareQuery($query, $headNodeTables = array()) {
 
         //check if this table is only available on the head node
         //if yes, donot execute the query in parallel
- 	 	 $posDot = strpos($fromNode['table'], ".");
  	 	 $found = false;
+ 	 	 $tableName = str_replace("`", "", $fromNode['table']);
+ 	 	 $posDot = strpos($tableName, ".");
 		 foreach($headNodeTables as $headNodeTable) {
-		 	$posTable = strpos($fromNode['table'], $headNodeTable);
+		 	$posTable = strpos($tableName, $headNodeTable);
 		 	if($posTable !== false) {
 		 		if($posDot === false) {
-		 			if(strlen($fromNode['table']) === strlen($headNodeTable)) {
+		 			if(strlen($tableName) === strlen($headNodeTable)) {
 		 				$found = true;
 		 			}
 		 		} else {
-		 			if(strlen($fromNode['table']) - $posDot === strlen($headNodeTable)) {
+		 			if(strlen($tableName) - $posDot - 1 === strlen($headNodeTable)) {
+		 				$found = true;
+		 			} else if ($posTable == 0 && strlen($headNodeTable) == $posDot) {
 		 				$found = true;
 		 			}
 		 		}

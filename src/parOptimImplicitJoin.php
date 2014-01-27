@@ -1796,17 +1796,20 @@ function PHPSQLdetStartTable($tableList, $headNodeTables = array(), $dependantLi
 
 		 //check if this is a table that is only on the head node
 		 //Quick fast check for this
- 	 	 $posDot = strpos($table['name'], ".");
  	 	 $found = false;
+ 	 	 $tableName = str_replace("`", "", $table['name']);
+ 	 	 $posDot = strpos($tableName, ".");
 		 foreach($headNodeTables as $headNodeTable) {
-		 	$posTable = strpos($table['name'], $headNodeTable);
+		 	$posTable = strpos($tableName, $headNodeTable);
 		 	if($posTable !== false) {
 		 		if($posDot === false) {
-		 			if(strlen($table['name']) === strlen($headNodeTable)) {
+		 			if(strlen($tableName) === strlen($headNodeTable)) {
 		 				$found = true;
 		 			}
 		 		} else {
-		 			if(strlen($table['name']) - $posDot === strlen($headNodeTable)) {
+		 			if(strlen($tableName) - $posDot - 1 === strlen($headNodeTable)) {
+		 				$found = true;
+		 			} else if ($posTable == 0 && strlen($headNodeTable) == $posDot) {
 		 				$found = true;
 		 			}
 		 		}

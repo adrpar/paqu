@@ -50,4 +50,10 @@ echo runTest("SELECT i from barbar WHERE i=1;", "test15.ref");
 
 echo "Test 16\n";
 echo runTest("SELECT i from bar WHERE i=1;", "test16.ref");
+
+echo "Test 17\n";
+echo runTest("SELECT i from `TEST`.`bar` WHERE i>1;", "test17.ref");
+
+echo "Test 18\n";
+echo runTest("SELECT i from `bar`.`barbar` WHERE i>1;", "test18.ref");
 ?>
