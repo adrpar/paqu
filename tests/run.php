@@ -56,4 +56,8 @@ echo runTest("SELECT i from `TEST`.`bar` WHERE i>1;", "test17.ref");
 
 echo "Test 18\n";
 echo runTest("SELECT i from `bar`.`barbar` WHERE i>1;", "test18.ref");
+
+echo "Test 19\n";
+echo runTest("SELECT `D.treeRootId`, `D.x`,`D.y`,`D.z`,`D.mass`, `P.x`,`P.y`,`P.z`, `P.mass` FROM `bar`.`bar` WHERE `P.x` BETWEEN 515 and 516;", "test19.ref");
+
 ?>

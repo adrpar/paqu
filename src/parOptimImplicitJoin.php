@@ -1951,7 +1951,7 @@ function PHPSQLGroupWhereCond($sqlTree, &$tableList) {
 		if(empty($currParticipants)) {
 			$table = false;
 		} else {
-			$table = explode(".", trim($currParticipants[0]['base_expr'], "()"));
+			$table = PHPSQLParseColumnName(trim($currParticipants[0]['base_expr'], "()"));
 		}
 		if (count($table) > 1) {
 			$table = $table[0];
@@ -1988,8 +1988,8 @@ function PHPSQLGroupWhereCond($sqlTree, &$tableList) {
 					array_push($currTableInList['where_cond'], $operator);
 				} else {
 					array_push($currTableInList['where_cond'], $node);
-				}
-				break;
+			}
+			break;
 		}
 	}
 }
@@ -2054,42 +2054,41 @@ function PHPSQLGetListOfParticipants($node) {
  * Find all the columns in a SQL query and save them in the tableList with the according table.
  */
 function PHPSQLGroupTablesAndCols($sqlTree, &$listOfTables) {
-
 	$selectTree = $sqlTree['SELECT'];
 	$fromTree = $sqlTree['FROM'];
 
 	foreach ($fromTree as $currTable) {
-	 $table = array();
-	 $table['name'] = $currTable['table'];
-	 $table['alias'] = $currTable['alias'];
-	 $table['sel_columns'] = array();
-	 array_push($listOfTables, $table);
- }
+		$table = array();
+		$table['name'] = $currTable['table'];
+		$table['alias'] = $currTable['alias'];
+		$table['sel_columns'] = array();
+		array_push($listOfTables, $table);
+	}
 
-		#put dependant queries at the end of the list
- $currIndex = count($listOfTables) - 1;
- foreach ($listOfTables as $key => $node) {
-	 if ($node['name'] == 'DEPENDENT-SUBQUERY' && $key < $currIndex) {
-		 $tmpNode = $listOfTables[$currIndex];
-		 $listOfTables[$currIndex] = $node;
-		 $listOfTables[$key] = $tmpNode;
+	#put dependant queries at the end of the list
+	$currIndex = count($listOfTables) - 1;
+	foreach ($listOfTables as $key => $node) {
+		if ($node['name'] == 'DEPENDENT-SUBQUERY' && $key < $currIndex) {
+			$tmpNode = $listOfTables[$currIndex];
+			$listOfTables[$currIndex] = $node;
+			$listOfTables[$key] = $tmpNode;
 
-		 $currIndex--;
-	 }
- }
-
-		#link the columns with the tables
- foreach ($selectTree as $currColumn) {
-	 $fields = explode('.', $currColumn['alias']);
-
-	 $currAlias = trim($fields[0], ' `');
-	 foreach ($listOfTables as &$currTable) {
-		 if ($currTable['alias'] === $currAlias) {
-			array_push($currTable['sel_columns'], $currColumn);
-			break;
+			$currIndex--;
 		}
 	}
-}
+
+	#link the columns with the tables
+	foreach ($selectTree as $currColumn) {
+		$fields = PHPSQLParseColumnName($currColumn['alias']);
+
+		$currAlias = trim($fields[0], ' `');
+		foreach ($listOfTables as &$currTable) {
+			if ($currTable['alias'] === $currAlias || $currTable['alias'] === $currTable['name']) {
+				array_push($currTable['sel_columns'], $currColumn);
+				break;
+			}
+		}
+	}
 }
 
 /**
@@ -2339,6 +2338,25 @@ function PHPSQLParseWhereTokens_createBaseExpr(&$currLeaf) {
 		}
 	}
 	$currLeaf['base_expr'] .= ")";
+}
+
+function PHPSQLParseColumnName($colName) {
+	$fields = explode(".", $colName);
+
+	//go through the result and put all quoted elements back together
+	$oldKey = false;
+	foreach($fields as $key => $field) {
+		$posQuote = strpos($field, "`");
+
+		if($posQuote !== false && $posQuote > 0) {
+			$fields[$oldKey] .= "." . $field;
+			unset($fields[$key]);
+		} else {
+			$oldKey = $key;
+		}
+	}
+
+	return $fields;
 }
 
 ?>
