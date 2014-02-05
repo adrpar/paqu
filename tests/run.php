@@ -60,4 +60,7 @@ echo runTest("SELECT i from `bar`.`barbar` WHERE i>1;", "test18.ref");
 echo "Test 19\n";
 echo runTest("SELECT `D.treeRootId`, `D.x`,`D.y`,`D.z`,`D.mass`, `P.x`,`P.y`,`P.z`, `P.mass` FROM `bar`.`bar` WHERE `P.x` BETWEEN 515 and 516;", "test19.ref");
 
+echo "Test 20\n";
+echo runTest("SELECT x,y,z FROM MDR1.Particles85 WHERE RAND(154321) <= 2.91E-5;", "test20.ref");
+
 ?>
