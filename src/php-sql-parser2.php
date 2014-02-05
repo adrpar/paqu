@@ -246,7 +246,15 @@ if (!defined('HAVE_PHP_SQL_PARSER2')) {
 
             while (strlen($sql) > 0) {
 
-                $idx = $this->startsWith($sql, $splitter);
+            	$expIdx = $this->startsWith($sql, array("e-", "E-"));
+            	if($expIdx !== false) {
+            		$token .= $sql[0] . $sql[1];
+            		$sql = substr($sql, 2);
+            		continue;
+            	} else {
+	                $idx = $this->startsWith($sql, $splitter);
+            	}
+
                 if ($idx === false) {
                     $token .= $sql[0];
                     $sql = substr($sql, 1);
