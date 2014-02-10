@@ -1,0 +1,4 @@
+CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard. ENGINE=MyISAM SELECT sprng_make_seed() AS `_sprng_make_seed___`,COUNT(abs(*)) AS `_count_abs_*___` ORDER BY NULL  LIMIT 0
+USE spider_tmp_shard; INSERT INTO spider_tmp_shard. SELECT sprng_make_seed() AS `_sprng_make_seed___`,COUNT(abs(*)) AS `_count_abs_*___` ORDER BY NULL ; CALL paquLinkTmp('')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `_sprng_make_seed___`,SUM(`_count_abs_*___`) AS `_count_abs_*___`   
+CALL paquDropTmp('')

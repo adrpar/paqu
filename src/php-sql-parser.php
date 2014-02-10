@@ -164,9 +164,21 @@ if(!defined('HAVE_PHP_SQL_PARSER')) {
 					exit;
 				}
 	
-				$sql = str_replace(array('\\\'','\\"',"\r\n","\n","()"),array("''",'""'," "," "," "), $sql);
+//				$sql = str_replace(array('\\\'','\\"',"\r\n","\n","()"),array("''",'""'," "," "," "), $sql);
+/*				$sql = str_replace(array('\\\'','\\"',"\r\n","\n"),array("''",'""'," "," "), $sql);
 	                        $regex=<<<EOREGEX
 /(`(?:[^`]|``)`|[@A-Za-z0-9_.`]+(?<=e|E)-[0-9]+(?:\(\s*\)){0,1}|[@A-Za-z0-9_.`]+(?:\(\s*\)){0,1})
+|(\+|-|\*|\/|!=|>=|<=|<>|>|<|&&|\|\||=|\^)
+|(\(.*?\))   # Match FUNCTION(...) OR BAREWORDS
+|('(?:[^']|'')*'+)
+|("(?:[^"]|"")*"+)
+|([^ ,]+)
+/ix
+EOREGEX
+;*/
+				$sql = str_replace(array('\\\'','\\"',"\r\n","\n"),array("''",'""'," "," "), $sql);
+	                        $regex=<<<EOREGEX
+/(`(?:[^`]|``)`|[@A-Za-z0-9_.`]+(?<=e|E)-[0-9]+|[@A-Za-z0-9_.`]+)
 |(\+|-|\*|\/|!=|>=|<=|<>|>|<|&&|\|\||=|\^)
 |(\(.*?\))   # Match FUNCTION(...) OR BAREWORDS
 |('(?:[^']|'')*'+)
@@ -178,7 +190,7 @@ EOREGEX
 	
 	        	$tokens = preg_split($regex, $sql,-1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 			$token_count = count($tokens);
-	
+
 			/* The above regex has one problem, because the parenthetical match is not greedy.
 			   Thus, when matching grouped expresions such as ( (a and b) or c) the 
 			   tokenizer will produce "( (a and b)", " ", "or", " " , "c,")" 
@@ -302,7 +314,6 @@ EOREGEX
 			$tokens = array_values($tokens);
 
 			return $tokens;
-	
 		}
 		
 		/* This function breaks up the SQL statement into logical sections.
@@ -1253,7 +1264,12 @@ EOREGEX
 				if(($type != 'operator' && $type != 'in-list' && $type != 'sub_expr') && (in_array($upper, $this->reserved) || $funcCand == 1)) {
 					$token = $upper;
 					if(!in_array($upper,$this->functions)) {
-						$type = 'reserved';	
+						if(in_array($upper, $this->reserved)) {
+							$type = 'reserved';	
+						} else {
+							$type = 'function';
+							if(!empty($tokens[$key+1])) $sub_expr = $tokens[$key+1]; else $sub_expr="()";
+						}
 					} else {
 						switch($token) {
 							case 'AVG':
@@ -1295,8 +1311,8 @@ EOREGEX
 					}
 	                $processed = $this->process_expr_list($this->split_sql($local_expr));
 					$type = 'expression';
-					
-					if(count($processed) == 1) {
+
+					if(!empty($processed) && count($processed) == 1) {
 						$type = $processed[0]['expr_type'];
 						$base_expr  = $processed[0]['base_expr'];
 						$processed = $processed[0]['sub_tree'];
@@ -1307,6 +1323,10 @@ EOREGEX
 				$sub_expr=trim($sub_expr);
 				$sub_expr = "";
 	
+				if(empty($processed)) {
+					$processed = false;
+				}
+
 				$expr[] = array( 'expr_type' => $type, 'base_expr' => $token, 'sub_tree' => $processed);
 				$prev_token = $upper;
 				$expr_type = "";

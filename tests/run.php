@@ -63,4 +63,7 @@ echo runTest("SELECT `D.treeRootId`, `D.x`,`D.y`,`D.z`,`D.mass`, `P.x`,`P.y`,`P.
 echo "Test 20\n";
 echo runTest("SELECT x,y,z FROM MDR1.Particles85 WHERE RAND(154321) <= 2.91E-5;", "test20.ref");
 
+echo "Test 21\n";
+echo runTest("SELECT sprng_make_seed(), count(abs(*));", "test21.ref");
+
 ?>

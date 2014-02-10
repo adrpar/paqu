@@ -111,10 +111,12 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 	#this handles nested subqueries that the user already provided. no idea how to handle these
 	#together with the automatic joins found below...
 	$subQueries = array();
-	foreach ($sqlTree['FROM'] as $subQuery) {
-		if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
-			$subQuery['sub_tree'] = PHPSQLbuildShardQuery($subQuery['sub_tree']);
-			array_push($subQueries, $subQuery);
+	if(!empty($sqlTree['FROM'])) {
+		foreach ($sqlTree['FROM'] as $subQuery) {
+			if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
+				$subQuery['sub_tree'] = PHPSQLbuildShardQuery($subQuery['sub_tree']);
+				array_push($subQueries, $subQuery);
+			}
 		}
 	}
 	if (!empty($sqlTree['WHERE'])) {
@@ -195,6 +197,10 @@ function linkSubqueriesToTree(&$nestedQuery, &$subQueries) {
 	//create a list of all SELECT columns in sub-trees and compare them with the
 	//ones in this selectTree's SELECT statement. If errors in the base_expr are
 	//found, correct them accordingly
+
+	if(empty($nestedQuery['FROM'])) {
+		return;
+	}
 
 	//fix subquery tree first
 	foreach ($nestedQuery['FROM'] as &$subQuery) {
@@ -365,7 +371,11 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 		$currInnerNode = PHPSQLbuildNestedQuery($sqlTree, $tableList, $dependantWheres, $recLevel + 1);
 	}
 
-	$table = $tableList[$recLevel];
+	if(empty($tableList[$recLevel])) {
+		$table = false;
+	} else {
+		$table = $tableList[$recLevel];
+	}
 
 	#now that we know where to start, build the SELECT tree
 	$currDepQueryNode = array();
@@ -1582,6 +1592,7 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
 	$tblAlias = str_replace("`", "", $tblAlias);
 
 	$workload = array();
+
 	if (array_key_exists('SELECT', $sqlSelect)) {
 		$workload = $sqlSelect['SELECT'];
 	} else {
@@ -2055,6 +2066,11 @@ function PHPSQLGetListOfParticipants($node) {
  */
 function PHPSQLGroupTablesAndCols($sqlTree, &$listOfTables) {
 	$selectTree = $sqlTree['SELECT'];
+
+	if(empty($sqlTree['FROM'])) {
+		return;
+	}
+
 	$fromTree = $sqlTree['FROM'];
 
 	foreach ($fromTree as $currTable) {

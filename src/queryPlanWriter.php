@@ -75,37 +75,39 @@ function PHPSQLprepareQuery($query, $headNodeTables = array()) {
     #determine if this is a serial or parallel query:
     #parallel only if there are other tables than temporary (i.e. dependent) ones involved
     $parallel = false;
-    foreach($shard_query->parsedCopy['FROM'] as $fromNode) {
-    	if($fromNode['table'] != 'DEPENDENT-SUBQUERY') {
-  	    $parallel = true;
+    if(!empty($shard_query->parsedCopy['FROM'])) {
+	    foreach($shard_query->parsedCopy['FROM'] as $fromNode) {
+	    	if($fromNode['table'] != 'DEPENDENT-SUBQUERY') {
+	  	    $parallel = true;
 
-        //check if this table is only available on the head node
-        //if yes, donot execute the query in parallel
- 	 	 $found = false;
- 	 	 $tableName = str_replace("`", "", $fromNode['table']);
- 	 	 $posDot = strpos($tableName, ".");
-		 foreach($headNodeTables as $headNodeTable) {
-		 	$posTable = strpos($tableName, $headNodeTable);
-		 	if($posTable !== false) {
-		 		if($posDot === false) {
-		 			if(strlen($tableName) === strlen($headNodeTable)) {
-		 				$found = true;
-		 			}
-		 		} else {
-		 			if(strlen($tableName) - $posDot - 1 === strlen($headNodeTable)) {
-		 				$found = true;
-		 			} else if ($posTable == 0 && strlen($headNodeTable) == $posDot) {
-		 				$found = true;
-		 			}
-		 		}
+	        //check if this table is only available on the head node
+	        //if yes, donot execute the query in parallel
+	 	 	 $found = false;
+	 	 	 $tableName = str_replace("`", "", $fromNode['table']);
+	 	 	 $posDot = strpos($tableName, ".");
+			 foreach($headNodeTables as $headNodeTable) {
+			 	$posTable = strpos($tableName, $headNodeTable);
+			 	if($posTable !== false) {
+			 		if($posDot === false) {
+			 			if(strlen($tableName) === strlen($headNodeTable)) {
+			 				$found = true;
+			 			}
+			 		} else {
+			 			if(strlen($tableName) - $posDot - 1 === strlen($headNodeTable)) {
+			 				$found = true;
+			 			} else if ($posTable == 0 && strlen($headNodeTable) == $posDot) {
+			 				$found = true;
+			 			}
+			 		}
 
-		 		if($found === true) {
-		            $parallel = false;
-					break;
-		 		}
-		 	}
-		 }
-    	}
+			 		if($found === true) {
+			            $parallel = false;
+						break;
+			 		}
+			 	}
+			 }
+	    	}
+	    }
     }
 
     $shard_query->subqueries[$shard_query->table_name] = $shard_query->shard_sql;
