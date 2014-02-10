@@ -792,6 +792,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 	    if (empty($this->parsed['FROM'])) {
 //			$this->errors = array('Unsupported query', 'Missing FROM clause');
 //			return false;
+			$this->table_name = "aggregation_tmp_" . mt_rand(1, 100000000);
 	    } else {
 			$select['shard_sql'] .= "\n" . $this->process_from($this->parsed['FROM'], $recLevel);
 			$this->table_name = "aggregation_tmp_" . mt_rand(1, 100000000);
