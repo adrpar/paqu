@@ -919,7 +919,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 				}
 		    } else {
 				if($order_by === "")
-				    $queries[] = $select['shard_sql'] . $group_by . ' ORDER BY NULL' . ' ' . $limit;
+				    $queries[] = $select['shard_sql'] . $group_by . ' ' . $limit;
 				else 
 				    $queries[] = $select['shard_sql'] . $group_by . ' ' . $order_by . ' ' . $limit;
 		    }
