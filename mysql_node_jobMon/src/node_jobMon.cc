@@ -219,6 +219,8 @@ pthread_handler_t paqu_daemon(void *p) {
             if(thdRemoteList != NULL) {
 	            delete thdRemoteList;
             }
+        } else {
+        	connectToHead(&mysql);
         }
 
         //get the time for sleep
@@ -410,6 +412,8 @@ int connectToHead(MYSQL **mysql) {
         *mysql = NULL;
         return 1;
     }
+
+    fprintf(stderr, "node_jobMon: successfully connected to head node.\n");
 
     return 0;
 }
