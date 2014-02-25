@@ -30,7 +30,7 @@
 #include <sql_parse.h>
 #include "daemon_thd.h"
 
-#if MYSQL_VERSION_ID >= 50606
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50606
 #include <global_threads.h>
 #endif
 
@@ -425,14 +425,14 @@ void getLocalProcesslist(thd_list **toThisList) {
 
     mysql_mutex_lock(&LOCK_thread_count);
 
-#if MYSQL_VERSION_ID < 50606
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50606
     THD *currThd;
     I_List_iterator<THD> thdIterCnt(threads);
 #endif
 
     int thdCount = 0;
 
-#if MYSQL_VERSION_ID < 50606
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50606
     while ((currThd = thdIterCnt++))
         thdCount++;
 #else
@@ -442,7 +442,7 @@ void getLocalProcesslist(thd_list **toThisList) {
     *toThisList = new thd_list(thdCount);
 
 
-#if MYSQL_VERSION_ID < 50606
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50606
     I_List_iterator<THD> thdIter(threads);
 #else
     Thread_iterator thdIter = global_thread_list_begin();
@@ -451,7 +451,7 @@ void getLocalProcesslist(thd_list **toThisList) {
 
     thdCount = 0;
 
-#if MYSQL_VERSION_ID < 50606
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50606
     while ((currThd = thdIter++)) {
 #else
     for (; thdIter != thdIterEnd; ++thdIter) {
