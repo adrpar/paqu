@@ -66,4 +66,7 @@ echo runTest("SELECT x,y,z FROM MDR1.Particles85 WHERE RAND(154321) <= 2.91E-5;"
 echo "Test 21\n";
 echo runTest("SELECT sprng_make_seed(), count(abs(*));", "test21.ref");
 
+echo "Test 22\n";
+echo runTest("SELECT t1.a, count(*) from t1, t2, t3 where t1.id = t2.t1_id and t3.id = t2.date_id group by t1.a;", "test22.ref");
+
 ?>

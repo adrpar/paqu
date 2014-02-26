@@ -1718,8 +1718,12 @@ function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList,
 		$tmpList3 = PHPSQLgetAllColsFromWhere($sqlTree['WHERE'], "", true);
 		$tmpList2 = array_merge($tmpList2, $tmpList3);
 	}
- 
-	$listOfWhereCols = array_merge($tmpList1, $tmpList2);
+
+	if($tblAlias === $tblName) {
+	 	$listOfWhereCols = $tmpList1;
+	} else {
+	 	$listOfWhereCols = array_merge($tmpList1, $tmpList2);
+	}
 
 	foreach ($listOfWhereCols as $cols) {
 		$find = false;

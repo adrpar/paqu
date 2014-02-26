@@ -93,14 +93,15 @@ function envokeParseSqlAllParser($sql) {
  * @param sqlTree SQL tree
  * @param mysqlConn a properly initialised MySQLI/MySQLII connection to the DB
  * @param zendAdapter a valid ZEND DB adapter
+ * @param default database as defined by USE clause
  * @return a new SQL parser tree with the resolved columns
  * 
  * This recursive function parses a given part of the SQL tree and substitutes
  * all the SQL * attributes in subqueries in FROM, WHERE and eventually in the
  * SELECT statement.
  */
-function processQueryWildcard($sqlTree, $mysqlConn = false, $zendAdapter = false) {
-    _parseSqlAll_FROM($sqlTree, $mysqlConn, $zendAdapter);
+function processQueryWildcard($sqlTree, $mysqlConn = false, $zendAdapter = false, $defaultDB = false) {
+    _parseSqlAll_FROM($sqlTree, $mysqlConn, $zendAdapter, $defaultDB);
     _parseSqlAll_WHERE($sqlTree, $mysqlConn, $zendAdapter);
     _parseSqlAll_SELECT($sqlTree, $mysqlConn, $zendAdapter);
 
@@ -208,12 +209,13 @@ function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList, &$selectTreeNode = 
  * @param sqlTree SQL parser tree node of complete query/subquery
  * @param mysqlConn a properly initialised MySQLI/MySQLII connection to the DB
  * @param zendAdapter a valid ZEND DB adapter
+ * @param default database as defined by USE clause
  * 
  * This function parser the current level of the sqlTree to find any subqueries
  * in the FROM statement. If subqueries are found, process them recursively using
  * processQueryWildcard.
  */
-function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false) {
+function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false, $defaultDB = false) {
     if(!is_array($sqlTree) || !array_key_exists('FROM', $sqlTree))
 	    return;
     
@@ -222,6 +224,17 @@ function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false) 
 		    $tree = processQueryWildcard($node['sub_tree'], $mysqlConn, $zendAdapter);
 		    $node['sub_tree'] = $tree;
 		}
+    }
+
+    //add the default database to FROM tables, as defined in defaultDB
+    if($defaultDB !== false) {
+    	foreach($sqlTree['FROM'] as &$node) {
+    		$tmp = _parseSqlAll_parseResourceName($node['table']);
+    		if(count($tmp) == 2) {
+    			//add the database name
+    			$node['table'] = '`' . trim($defaultDB, '`') . '`.' . $node['table'];
+    		}
+    	}
     }
 }
 
