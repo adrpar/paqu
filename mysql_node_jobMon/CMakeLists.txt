@@ -24,9 +24,11 @@ endif()
 
 execute_process(COMMAND ${MYSQL_CONFIG} --include OUTPUT_VARIABLE MYSQL_INCLUDE_DIR)
 execute_process(COMMAND ${MYSQL_CONFIG} --libs OUTPUT_VARIABLE MYSQL_LIBRARIES)
+execute_process(COMMAND ${MYSQL_CONFIG} --variable=pkglibdir OUTPUT_VARIABLE MYSQL_LIBDIR)
 execute_process(COMMAND ${MYSQL_CONFIG} --plugindir OUTPUT_VARIABLE MYSQL_PLUGIN_DIR)
 
 STRING(REGEX REPLACE "\n" "" MYSQL_INCLUDE_DIR ${MYSQL_INCLUDE_DIR})
+STRING(REGEX REPLACE "\n" "" MYSQL_LIBDIR ${MYSQL_LIBDIR})
 STRING(REGEX REPLACE "\n" "" MYSQL_LIBRARIES ${MYSQL_LIBRARIES})
 STRING(REGEX REPLACE "\n" "" MYSQL_PLUGIN_DIR ${MYSQL_PLUGIN_DIR})
 
@@ -81,6 +83,11 @@ add_library (paqu_jobMon ${FILES_SRC})
 
 #get rid of the lib infront of the target file name
 set_target_properties(paqu_jobMon PROPERTIES PREFIX "")
+
+if(MARIADB)
+	find_library(SERVICELIB NAMES mysqlservices libmysqlservices HINTS "${MYSQL_LIBDIR}")
+	target_link_libraries(paqu_jobMon ${SERVICELIB})
+endif()
 
 INSTALL(TARGETS paqu_jobMon DESTINATION "${MYSQL_PLUGIN_DIR}")
 

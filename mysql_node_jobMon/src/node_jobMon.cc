@@ -40,7 +40,7 @@
 
 char *headNodeConnectionString = NULL;
 long intervalSec;
-THD *thd;
+THD *thd = NULL;
 #if MYSQL_VERSION_ID >= 50505
 mysql_mutex_t paquKillMutex = PTHREAD_MUTEX_INITIALIZER;
 mysql_cond_t paquKillCond = PTHREAD_COND_INITIALIZER;
@@ -251,6 +251,7 @@ pthread_handler_t paqu_daemon(void *p) {
         mysql_close(mysql);
 
     deinit_thread(&thd);
+    thd = NULL;
     pthread_exit(0);
     return NULL;
 }
@@ -261,8 +262,10 @@ int parseConnectStr(char *connectStr, int len) {
     if (connectStr == NULL)
         return 1;
 
-    if (connectStrCpy != NULL)
+    if (connectStrCpy != NULL) {
         free(connectStrCpy);
+        connectStrCpy = NULL;
+    }
 
     connectStrCpy = strndup(connectStr, len);
 
@@ -539,7 +542,7 @@ static int paqu_plugin_deinit(void *p) {
     fprintf(stderr, "PaQu Kill daemon stopped at %s\n", time_str);
 
     if (connectStrCpy != NULL)
-        my_free(connectStrCpy);
+        free(connectStrCpy);
 
     return 0;
 }
