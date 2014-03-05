@@ -30,8 +30,9 @@
 
 /* This script requires PEAR Net_Gearman */
 /* It also requires Console_Getopt, but this should be installed by default with pear */
-require_once 'php-sql-parser.php';
+require_once 'php-sql-parser2.php';
 require_once 'parOptimImplicitJoin.php';
+require_once 'parserCompatibility.php';
 #$params = get_commandline();
 #FIXME: This should not extend MySQLDAl, but should create a new DL object
 #DL needs additions such as creating table, check existence of table, etc.
@@ -100,7 +101,7 @@ class ShardQuery {
 				$error[] = array('error_clause' => '*', 'error_reason' => '"SELECT *" is not supported');
 				continue;
 		    }*/
-		    $alias = $clause['alias'];
+		    $alias = "`" . $clause['alias']['name'] . "`";
 
 		    if (strpos($alias, '.')) {
 				$alias = trim($alias, '``');
@@ -108,7 +109,7 @@ class ShardQuery {
 
 				if (count($tmp) > 2) {
 				    #this is a more complicated expression, use the alias as it is (might be a formula or something)
-				    $alias = "`" . substr(trim($clause['alias'], "`"), 0, 50) . "`";
+				    $alias = "`" . substr(trim($clause['alias']['name'], "`"), 0, 50) . "`";
 				} else {
 				    $alias = $tmp[0] . "." . $tmp[1];
 				    $alias = "`$alias`";
@@ -133,8 +134,16 @@ class ShardQuery {
 				    if ($clause['sub_tree'][0]['expr_type'] == 'aggregate_function') {
 						$is_aggregate = true;
 						$skip_next = true;
-						$base_expr = $clause['sub_tree'][1]['base_expr'];
-						$alias = "`" . substr(trim($clause['alias'], "`"), 0, 50) . "`";
+
+						var_dump($clause); die(0);
+
+						if($clause['expr_type'] === 'function' && strpos($base_expr, "(") === false) {
+					    	$base_expr = getBaseExpr($clause);
+		    			} else {
+		    				$base_expr = $clause['base_expr'];
+		    			}
+						
+						$alias = "`" . substr(trim($clause['alias']['name'], "`"), 0, 50) . "`";
 						$function = $clause['sub_tree'][0]['base_expr'];
 
 						switch ($function) {
@@ -307,7 +316,7 @@ class ShardQuery {
 
 		    		//if this is a function without arguments, add the parenthesis
 		    		if($clause['expr_type'] === 'function' && strpos($base_expr, "(") === false) {
-		    			$base_expr .= "()";
+					    $base_expr = getBaseExpr($clause);
 		    		}
 
 				    $shard_query .= $base_expr . ' AS ' . $alias;
@@ -427,13 +436,13 @@ class ShardQuery {
 		}
 
 		#escape the table name if it is unescaped
-		if ($tables[0]['alias'] != "" && $tables[0]['alias'][0] != '`' && $tables[0]['alias'][0] != '(')
-		    $tables[0]['alias'] = '`' . $tables[0]['alias'] . '`';
+		if ($tables[0]['alias']['name'] != "" && $tables[0]['alias']['name'][0] != '`' && $tables[0]['alias']['name'][0] != '(')
+		    $tables[0]['alias']['name'] = $tables[0]['alias']['name'];
 
 		#the first table is always prefixed by FROM
 		$sql = "FROM " . $tables[0]['table'];
-		if($tables[0]['alias'] != "") {
-		    $sql .= ' AS ' . $tables[0]['alias'];
+		if($tables[0]['alias']['name'] != "") {
+		    $sql .= ' AS ' . "`" . $tables[0]['alias']['name'] . "`";
 		}
 		
 		$cnt = count($tables);
@@ -448,19 +457,19 @@ class ShardQuery {
 
 		    if ($sql)
 				$sql .= " ";
-		    if ($tables[$i]['alias'] != "" && $tables[$i]['alias'][0] != '`' && $tables[$i]['alias'][0] != '(') {
-				$pos = strpos($tables[$i]['alias'], '.');
+		    if ($tables[$i]['alias']['name'] != "" && $tables[$i]['alias']['name'][0] != '`' && $tables[$i]['alias']['name'][0] != '(') {
+				$pos = strpos($tables[$i]['alias']['name'], '.');
 				if ($pos !== false) {
-				    $info = explode('.', $tables[$i]['alias']);
+				    $info = explode('.', $tables[$i]['alias']['name']);
 				    $table = $info[1];
-				    $tables[$i]['alias'] = '`' . $table . '`';
+				    $tables[$i]['alias']['name'] = $table;
 				} else {
-				    $tables[$i]['alias'] = '`' . $tables[$i]['alias'] . '`';
+				    $tables[$i]['alias']['name'] = $tables[$i]['alias']['name'];
 				}
 		    }
 		    $sql .= $tables[$i]['join_type'] . ' ' . $tables[$i]['table'];
-		    if($tables[$i]['alias'] != "")
-				$sql .= ' AS ' . $tables[$i]['alias'];
+		    if($tables[$i]['alias']['name'] != "")
+				$sql .= ' AS ' . "`" . $tables[$i]['alias']['name'] . "`";
 			$sql .= ' ' . $tables[$i]['ref_type'] . $tables[$i]['ref_clause'];
 		}
 
@@ -692,7 +701,6 @@ class ShardQuery {
 			    }
 			}
 		} elseif ($clause['expr_type'] === 'function') {
-			Zend_Debug::dump($clause); die(0);
 			if(strpos($clause['base_expr'], "(") === false) {
     			$prev = $clause['base_expr'] . "()";
     		} else {
@@ -733,7 +741,11 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 	if (!is_array($sql)) {
 	    #TODO: support parser re-use	
 	    #$this->parsed = $this->client->do('sql_parse',$sql);
-	    $parser = new PHPSQLParserOld($sql);
+	    $parser = new PHPSQLParser2($sql);
+
+	    //make things compatible and add stuff that was in the old version of the parser to the new version
+	    //TODO: remove or change things that are quirkily added here
+	    addAliasToAll($parser->parsed);
 
 	    $this->parsed = PHPSQLbuildShardQuery($parser->parsed, $this->headNodeTables);
 	    $this->parsedCopy = $this->parsed;
@@ -856,12 +868,12 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 						$order_by_coord .= ",";
 				    
 				    #check if order by arguemnt is just a number. if yes, we dont need to quote this
-				    if(!empty($o['alias']) && is_numeric(trim($o['alias'], "`"))) {
-						$o['alias'] = trim($o['alias'], "`");
+				    if(!empty($o['alias']['name']) && is_numeric(trim($o['alias']['name'], "`"))) {
+						$o['alias']['name'] = trim($o['alias']['name'], "`");
 				    }
 				    
-				    $order_by .= $o['alias'] . ' ' . $o['direction'];
-				    $order_by_coord .= $o['alias'] . ' ' . $o['direction'];
+				    $order_by .= "`" . $o['alias']['name'] . "`" . ' ' . $o['direction'];
+				    $order_by_coord .= "`" . $o['alias']['name'] . "`" . ' ' . $o['direction'];
 				}
 
 				//only do order by on shards if LIMIT statement is present - otherwise sorting has
@@ -889,7 +901,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 				    if ($group_by_coord)
 						$group_by_coord .= ",";
 
-				    $group_by_coord .= $g['alias'];
+				    $group_by_coord .= "`" . $g['alias']['name'] . "`";
 				}
 
 				$group_by = " GROUP BY {$group_by}";
@@ -900,8 +912,11 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 		    $limit = "";
 		    $limit_coord = "";
 		    if (!empty($this->parsed['LIMIT'])) {
-				$limit .= " LIMIT {$this->parsed['LIMIT']['start']},{$this->parsed['LIMIT']['end']}";
-				$limit_coord .= " LIMIT {$this->parsed['LIMIT']['start']},{$this->parsed['LIMIT']['end']}";
+		        if($this->parsed['LIMIT']['offset'] == "")
+        			$this->parsed['LIMIT']['offset'] = 0;
+
+				$limit .= " LIMIT {$this->parsed['LIMIT']['offset']},{$this->parsed['LIMIT']['rowcount']}";
+				$limit_coord .= " LIMIT {$this->parsed['LIMIT']['offset']},{$this->parsed['LIMIT']['rowcount']}";
 				unset($this->parsed['LIMIT']);
 		    }
 
