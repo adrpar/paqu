@@ -101,7 +101,11 @@ class ShardQuery {
 				$error[] = array('error_clause' => '*', 'error_reason' => '"SELECT *" is not supported');
 				continue;
 		    }*/
-		    $alias = "`" . $clause['alias']['name'] . "`";
+		    if(isset($clause['alias']['name']) && !empty($clause['alias']['name'])) {
+			    $alias = "`" . $clause['alias']['name'] . "`";
+		    } else {
+			    $alias = "`" . $clause['base_expr'] . "`";
+		    }
 
 		    if (strpos($alias, '.')) {
 				$alias = trim($alias, '``');
@@ -117,194 +121,190 @@ class ShardQuery {
 		    }
 
 		    //further escape any function name that might end up in the alias
-            if ($clause['expr_type'] === "aggregate_function" ||
-                    $clause['expr_type'] === "function") {
+		    //the new parser does not add anything helpfull to equations - so we need to look for stuff
+		    //without any expr_type
+            if ((isset($clause['expr_type']) && ($clause['expr_type'] === "aggregate_function" ||
+                    $clause['expr_type'] === "function")) ) {
 
                 //build escaped string
         		if(trim($alias, "`") === $clause['base_expr']) {
 	                $alias = "_" . $this->buildEscapedString(array($clause));
+	        		$alias = "`" . $alias . "`";
         		}
         	}
 
 		    $base_expr = $clause['base_expr'];
 
+		    if(!isset($clause['expr_type'])) {
+		    	continue;
+		    }
+
 		    switch ($clause['expr_type']) {
-				case 'expression':
 				case 'aggregate_function':
-				    if ($clause['sub_tree'][0]['expr_type'] == 'aggregate_function') {
-						$is_aggregate = true;
-						$skip_next = true;
+					$is_aggregate = true;
+					$skip_next = true;
 
-						var_dump($clause); die(0);
-
-						if($clause['expr_type'] === 'function' && strpos($base_expr, "(") === false) {
-					    	$base_expr = getBaseExpr($clause);
-		    			} else {
-		    				$base_expr = $clause['base_expr'];
-		    			}
-						
-						$alias = "`" . substr(trim($clause['alias']['name'], "`"), 0, 50) . "`";
-						$function = $clause['sub_tree'][0]['base_expr'];
-
-						switch ($function) {
-						    #these are aggregates that dont need special treatment on the coordination side
-						    case 'MIN':
-						    case 'MAX':
-						    case 'SUM':
-								$used_agg_func = 1;
-								$base_expr = trim($base_expr, ' ()');
-								$base_expr = fix_trunc_parenth($base_expr);
-								$expr_info = explode(" ", $base_expr);
-								if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
-								    if ($this->verbose) {
-										echo "Detected a {$function} [DISTINCT] expression!\n";
-								    }
-
-								    unset($expr_info[0]);
-								    $new_expr = join(" ", $expr_info);
-								    $shard_query .= "$new_expr AS $alias";
-								    $coord_query .= "{$function}(distinct $alias) as $alias";
-								    $push_group[] = $pos + 1;
-								} else {
-								    switch ($function) {
-										case 'SUM':
-										    $coord_odku[] = "$alias=$alias +  VALUES($alias)";
-										    break;
-										case 'MIN':
-										    $coord_odku[] = "$alias=IF($alias < VALUES($alias), VALUES($alias),$alias)";
-										    break;
-										case 'MAX':
-										    $coord_odku[] = "$alias=IF($alias > VALUES($alias), VALUES($alias), $alias)";
-										    break;
-								    }
-								    $shard_query .= "{$function}({$base_expr}) AS $alias";
-								    $coord_query .= "{$function}({$alias}) AS $alias";
-								}
-
-								break;
-
-						    #special treatment needed
-						    case 'AVG':
-						    case 'STDDEV':
-						    case 'STD':
-						    case 'STDDEV_POP':
-						    case 'STDDEV_SAMP':
-						    case 'VARIANCE':
-						    case 'VAR_POP':
-						    case 'VAR_SAMP':
-						    case 'GROUP_CONCAT':
-								$used_agg_func = 1;
-								$base_expr = trim($base_expr, ' ()');
-								$base_expr = fix_trunc_parenth($base_expr);
-								$expr_info = explode(" ", $base_expr);
-								if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
-								    if ($this->verbose) {
-										echo "Detected a {$function} [DISTINCT] expression!\n";
-								    }
-
-								    unset($expr_info[0]);
-								    $new_expr = join(" ", $expr_info);
-								    $shard_query .= "$new_expr AS $alias";
-								    $coord_query .= "{$function}(distinct $alias) as $alias";
-								} else {
-								    switch ($function) {
-										case 'AVG':
-										    $alias = trim($alias, '`');
-										    $shard_query .= " COUNT({$base_expr}) AS `cnt_{$alias}`, SUM({$base_expr}) AS `sum_{$alias}`";
-										    $coord_query .= " (SUM(`sum_{$alias}`) / SUM(`cnt_{$alias}`)) AS `$alias`";
-										    break;
-										case 'STDDEV':
-										case 'STD':
-										case 'STDDEV_POP':
-										    $alias = trim($alias, '`');
-										    $avgAlias = '`agr_' . $alias . '`';
-										    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
-										    $coord_query .= " SQRT(partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1)) AS `$alias`";
-										    break;
-
-										case 'STDDEV_SAMP':
-										    $alias = trim($alias, '`');
-										    $avgAlias = '`agr_' . $alias . '`';
-										    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
-										    $coord_query .= " SQRT(partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / SUM(`cnt_{$alias}`)) AS `$alias`";
-										    break;
-
-										case 'VARIANCE':
-										case 'VAR_POP':
-										    $alias = trim($alias, '`');
-										    $avgAlias = '`agr_' . $alias . '`';
-										    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
-										    $coord_query .= " partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1) AS `$alias`";
-										    break;
-
-										case 'VAR_SAMP':
-										    $alias = trim($alias, '`');
-										    $avgAlias = '`agr_' . $alias . '`';
-										    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
-										    $coord_query .= " partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1) AS `$alias`";
-										    break;
-
-										default:
-										    $shard_query .= "{$function}({$base_expr}) AS $alias";
-										    $coord_query .= "{$function}({$alias}) AS $alias";
-										    break;
-								    }
-								}
-								$push_group[] = $pos + 1;
-								$group_aliases[] = $alias;
-
-								break;
-
-						    case 'COUNT':
-								$used_agg_func = 1;
-								$base_expr = trim($base_expr, ' ()');
-								$base_expr = fix_trunc_parenth($base_expr);
-
-								$expr_info = explode(" ", $base_expr);
-								if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
-								    if ($this->verbose) {
-										echo "Detected a COUNT [DISTINCT] expression!\n";
-								    }
-								    unset($expr_info[0]);
-								    $new_expr = join(" ", $expr_info);
-								    $shard_query .= "$new_expr AS $alias";
-								    $coord_query .= "COUNT(distinct $alias) as $alias";
-								    $push_group[] = $pos + 1;
-								} else {
-								    $shard_query .= "COUNT({$base_expr}) AS $alias";
-								    $coord_query .= "SUM($alias) AS $alias";
-								    $coord_odku[] = "$alias=$alias +  VALUES($alias)";
-								}
-
-								break;
-
-						    default:
-								$error[] = array('error_clause' => $clause['base_expr'],
-								    'error_reason' => 'Unsupported aggregate function');
-
-								break;
-						}
-			    	} else {
-			    		//if this is a function without arguments, add the parenthesis
-			    		if(strpos($base_expr, "(") === false) {
-			    			$base_expr .= "()";
-			    		}
-
-						$group[] = $pos + 1;
-						$group_aliases[] = $alias;
-
-						$shard_query .= $base_expr . ' AS ' . $alias;
-
-						#if this is a temporary column used for grouping, don't select it in the coordination query
-						if (!array_key_exists('group_clause', $clause) && $whereSubquery === false) {
-						    $coord_query .= $alias;
-						    $coord_odku[] = "$alias=VALUES($alias)";
+					if(strpos($base_expr, "(") === false) {
+						if(!empty($clause['sub_tree'])) {
+							$base_expr = "";
+							foreach($clause['sub_tree'] as $node) {
+								$base_expr .= getBaseExpr($node);
+							}
 						} else {
-						    $coord_query = substr($coord_query, 0, -1);
+							$base_expr = "";
 						}
-			    	}
+	    			} else {
+	    				$base_expr = $clause['base_expr'];
+	    			}
 
-				    break;
+					$alias = "`" . substr(trim($clause['alias']['name'], "`"), 0, 50) . "`";
+					$function = $clause['base_expr'];
+
+					switch ($function) {
+					    #these are aggregates that dont need special treatment on the coordination side
+					    case 'MIN':
+					    case 'MAX':
+					    case 'SUM':
+							$used_agg_func = 1;
+							$base_expr = trim($base_expr, ' ()');
+							$base_expr = fix_trunc_parenth($base_expr);
+							$expr_info = explode(" ", $base_expr);
+							if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
+							    if ($this->verbose) {
+									echo "Detected a {$function} [DISTINCT] expression!\n";
+							    }
+
+							    unset($expr_info[0]);
+							    $new_expr = join(" ", $expr_info);
+							    $shard_query .= "$new_expr AS $alias";
+							    $coord_query .= "{$function}(distinct $alias) as $alias";
+							    $push_group[] = $pos + 1;
+							} else {
+							    switch ($function) {
+									case 'SUM':
+									    $coord_odku[] = "$alias=$alias +  VALUES($alias)";
+									    break;
+									case 'MIN':
+									    $coord_odku[] = "$alias=IF($alias < VALUES($alias), VALUES($alias),$alias)";
+									    break;
+									case 'MAX':
+									    $coord_odku[] = "$alias=IF($alias > VALUES($alias), VALUES($alias), $alias)";
+									    break;
+							    }
+							    $shard_query .= "{$function}({$base_expr}) AS $alias";
+							    $coord_query .= "{$function}({$alias}) AS $alias";
+							}
+
+							break;
+
+					    #special treatment needed
+					    case 'AVG':
+					    case 'STDDEV':
+					    case 'STD':
+					    case 'STDDEV_POP':
+					    case 'STDDEV_SAMP':
+					    case 'VARIANCE':
+					    case 'VAR_POP':
+					    case 'VAR_SAMP':
+					    case 'GROUP_CONCAT':
+							$used_agg_func = 1;
+							$base_expr = trim($base_expr, ' ()');
+							$base_expr = fix_trunc_parenth($base_expr);
+							$expr_info = explode(" ", $base_expr);
+							if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
+							    if ($this->verbose) {
+									echo "Detected a {$function} [DISTINCT] expression!\n";
+							    }
+
+							    unset($expr_info[0]);
+							    $new_expr = join(" ", $expr_info);
+							    $shard_query .= "$new_expr AS $alias";
+							    $coord_query .= "{$function}(distinct $alias) as $alias";
+							} else {
+							    switch ($function) {
+									case 'AVG':
+									    $alias = trim($alias, '`');
+									    $shard_query .= " COUNT({$base_expr}) AS `cnt_{$alias}`, SUM({$base_expr}) AS `sum_{$alias}`";
+									    $coord_query .= " (SUM(`sum_{$alias}`) / SUM(`cnt_{$alias}`)) AS `$alias`";
+									    break;
+									case 'STDDEV':
+									case 'STD':
+									case 'STDDEV_POP':
+									    $alias = trim($alias, '`');
+									    $avgAlias = '`agr_' . $alias . '`';
+									    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
+									    $coord_query .= " SQRT(partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1)) AS `$alias`";
+									    break;
+
+									case 'STDDEV_SAMP':
+									    $alias = trim($alias, '`');
+									    $avgAlias = '`agr_' . $alias . '`';
+									    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
+									    $coord_query .= " SQRT(partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / SUM(`cnt_{$alias}`)) AS `$alias`";
+									    break;
+
+									case 'VARIANCE':
+									case 'VAR_POP':
+									    $alias = trim($alias, '`');
+									    $avgAlias = '`agr_' . $alias . '`';
+									    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
+									    $coord_query .= " partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1) AS `$alias`";
+									    break;
+
+									case 'VAR_SAMP':
+									    $alias = trim($alias, '`');
+									    $avgAlias = '`agr_' . $alias . '`';
+									    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
+									    $coord_query .= " partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1) AS `$alias`";
+									    break;
+
+									default:
+									    $shard_query .= "{$function}({$base_expr}) AS $alias";
+									    $coord_query .= "{$function}({$alias}) AS $alias";
+									    break;
+							    }
+							}
+							$push_group[] = $pos + 1;
+							$group_aliases[] = $alias;
+
+							break;
+
+					    case 'COUNT':
+							$used_agg_func = 1;
+							$base_expr = trim($base_expr, ' ()');
+							$base_expr = fix_trunc_parenth($base_expr);
+
+							$expr_info = explode(" ", $base_expr);
+							if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
+							    if ($this->verbose) {
+									echo "Detected a COUNT [DISTINCT] expression!\n";
+							    }
+							    unset($expr_info[0]);
+							    $new_expr = join(" ", $expr_info);
+							    $shard_query .= "$new_expr AS $alias";
+							    $coord_query .= "COUNT(distinct $alias) as $alias";
+							    $push_group[] = $pos + 1;
+							} else {
+							    $shard_query .= "COUNT({$base_expr}) AS $alias";
+							    $coord_query .= "SUM($alias) AS $alias";
+							    $coord_odku[] = "$alias=$alias +  VALUES($alias)";
+							}
+
+							break;
+
+					    default:
+							$error[] = array('error_clause' => $clause['base_expr'],
+							    'error_reason' => 'Unsupported aggregate function');
+
+							break;
+					}
+					break;
+
+				case 'expression':
+		    		//if this is a function without arguments, add the parenthesis
+		    		if(strpos($base_expr, "(") === false) {
+		    			$base_expr .= "()";
+		    		}
 
 				case 'operator':
 				case 'const':
@@ -320,9 +320,16 @@ class ShardQuery {
 		    		}
 
 				    $shard_query .= $base_expr . ' AS ' . $alias;
-				    
+
+					#if this is a temporary column used for grouping, don't select it in the coordination query
+					#TODO: CHECK IF THIS IS STILLN NEEDED!
+					/*if (!array_key_exists('group_clause', $clause) && $whereSubquery === false) {
+					    $coord_query .= $alias;
+					    $coord_odku[] = "$alias=VALUES($alias)";
+					}*/
+
 				    #exclude certain aggregation expressions
-				    if (strpos($alias, 'agr_stddev') === false) {
+				    if (strpos($alias, 'agr_stddev') === false && !array_key_exists('group_clause', $clause)) {
 						#if this is a temporary column from WHERE, don't select it in the coordination
 						if(!array_key_exists('where_col', $clause) || $recLevel >= 0) {
 						    #don't select order by columns, that are implicit
@@ -868,12 +875,24 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 						$order_by_coord .= ",";
 				    
 				    #check if order by arguemnt is just a number. if yes, we dont need to quote this
-				    if(!empty($o['alias']['name']) && is_numeric(trim($o['alias']['name'], "`"))) {
+				    if(isset($o['alias']['name']) && is_numeric(trim($o['alias']['name'], "`"))) {
 						$o['alias']['name'] = trim($o['alias']['name'], "`");
 				    }
-				    
-				    $order_by .= "`" . $o['alias']['name'] . "`" . ' ' . $o['direction'];
-				    $order_by_coord .= "`" . $o['alias']['name'] . "`" . ' ' . $o['direction'];
+
+				    if(isset($o['alias']['name']) && !empty($o['alias']['name'])) {
+					    $order_by .= "`" . $o['alias']['name'] . "`" . ' ' . $o['direction'];
+					    $order_by_coord .= "`" . $o['alias']['name'] . "`" . ' ' . $o['direction'];
+				    } else {
+					    $order_by .= "`" . $o['base_expr'] . "`" . ' ' . $o['direction'];
+
+						if($o['origParse']['sub_tree'] !== false) {
+						    $base = "_" . $this->buildEscapedString(array($o['origParse']));
+						} else {
+							$base = $o['base_expr'];
+						}
+
+					    $order_by_coord .= "`" . $base . "`" . ' ' . $o['direction'];
+				    }
 				}
 
 				//only do order by on shards if LIMIT statement is present - otherwise sorting has
@@ -901,7 +920,13 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 				    if ($group_by_coord)
 						$group_by_coord .= ",";
 
-				    $group_by_coord .= "`" . $g['alias']['name'] . "`";
+					if($o['origParse']['sub_tree'] !== false) {
+					    $base = "_" . $this->buildEscapedString(array($g['origParse']));
+					} else {
+						$base = $g['base_expr'];
+					}
+
+				    $group_by_coord .= "`" . $base . "`";
 				}
 
 				$group_by = " GROUP BY {$group_by}";

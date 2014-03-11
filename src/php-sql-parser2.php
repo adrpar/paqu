@@ -1087,7 +1087,7 @@ if (!defined('HAVE_PHP_SQL_PARSER2')) {
         /* This fuction processes each SELECT clause.  We determine what (if any) alias
          is provided, and we set the type of expression.
          */
-        private function process_select_expr($expression) {
+        public function process_select_expr($expression) {
 
             $tokens = $this->split_sql($expression);
             $token_count = count($tokens);
