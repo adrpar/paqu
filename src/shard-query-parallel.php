@@ -30,9 +30,10 @@
 
 /* This script requires PEAR Net_Gearman */
 /* It also requires Console_Getopt, but this should be installed by default with pear */
-require_once 'php-sql-parser2.php';
+require_once 'php-sql-parser/src/PHPSQLParser.php';
 require_once 'parOptimImplicitJoin.php';
 require_once 'parserCompatibility.php';
+require_once 'paquUtils.php';
 #$params = get_commandline();
 #FIXME: This should not extend MySQLDAl, but should create a new DL object
 #DL needs additions such as creating table, check existence of table, etc.
@@ -102,7 +103,7 @@ class ShardQuery {
 				continue;
 		    }*/
 		    if(isset($clause['alias']['name']) && !empty($clause['alias']['name'])) {
-			    $alias = "`" . $clause['alias']['name'] . "`";
+			    $alias = "`" . trim($clause['alias']['name'], "`") . "`";
 		    } else {
 			    $alias = "`" . $clause['base_expr'] . "`";
 		    }
@@ -124,11 +125,11 @@ class ShardQuery {
 		    //the new parser does not add anything helpfull to equations - so we need to look for stuff
 		    //without any expr_type
             if ((isset($clause['expr_type']) && ($clause['expr_type'] === "aggregate_function" ||
-                    $clause['expr_type'] === "function")) ) {
+                    $clause['expr_type'] === "function" || $clause['expr_type'] === "bracket_expression")) ) {
 
                 //build escaped string
-        		if(trim($alias, "`") === $clause['base_expr']) {
-	                $alias = "_" . $this->buildEscapedString(array($clause));
+        		if(trim($alias, "`") === $clause['base_expr'] || $alias === "``") {
+	                $alias = "_" . buildEscapedString(array($clause));
 	        		$alias = "`" . $alias . "`";
         		}
         	}
@@ -309,6 +310,7 @@ class ShardQuery {
 				case 'operator':
 				case 'const':
 				case 'colref':
+				case 'bracket_expression':
 				case 'reserved':
 				case 'function':
 				    $group[] = $pos + 1;
@@ -318,7 +320,7 @@ class ShardQuery {
 		    		if($clause['expr_type'] === 'function' && strpos($base_expr, "(") === false) {
 					    $base_expr = getBaseExpr($clause);
 		    		}
-
+		    		//var_dump($alias); die(0);
 				    $shard_query .= $base_expr . ' AS ' . $alias;
 
 					#if this is a temporary column used for grouping, don't select it in the coordination query
@@ -449,7 +451,7 @@ class ShardQuery {
 		#the first table is always prefixed by FROM
 		$sql = "FROM " . $tables[0]['table'];
 		if($tables[0]['alias']['name'] != "") {
-		    $sql .= ' AS ' . "`" . $tables[0]['alias']['name'] . "`";
+		    $sql .= ' AS ' . "`" . trim($tables[0]['alias']['name'], "`") . "`";
 		}
 		
 		$cnt = count($tables);
@@ -476,7 +478,7 @@ class ShardQuery {
 		    }
 		    $sql .= $tables[$i]['join_type'] . ' ' . $tables[$i]['table'];
 		    if($tables[$i]['alias']['name'] != "")
-				$sql .= ' AS ' . "`" . $tables[$i]['alias']['name'] . "`";
+				$sql .= ' AS ' . "`" . trim($tables[$i]['alias']['name'], "`") . "`";
 			$sql .= ' ' . $tables[$i]['ref_type'] . $tables[$i]['ref_clause'];
 		}
 
@@ -748,11 +750,11 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 	if (!is_array($sql)) {
 	    #TODO: support parser re-use	
 	    #$this->parsed = $this->client->do('sql_parse',$sql);
-	    $parser = new PHPSQLParser2($sql);
+	    $parser = new PHPSQLParser($sql);
 
 	    //make things compatible and add stuff that was in the old version of the parser to the new version
 	    //TODO: remove or change things that are quirkily added here
-	    addAliasToAll($parser->parsed);
+//	    addAliasToAll($parser->parsed);
 
 	    $this->parsed = PHPSQLbuildShardQuery($parser->parsed, $this->headNodeTables);
 	    $this->parsedCopy = $this->parsed;
@@ -852,7 +854,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 			    $this->parsed['WHERE'][] = array('expr_type' => 'operator', 'base_expr' => 'and', 'sub_tree' => "");
 			}
 			if (!$parser)
-			    $parser = new PHPSQLParserOld();
+			    $parser = new PHPSQLParser();
 			$this->messages[] = "Where clause push detected.  Pushing additional WHERE condition:'" . $this->push_where . "' to each storage node.\n";
 			if ($this->push_where)
 			    foreach ($parser->process_expr_list($parser->split_sql($this->push_where)) as $item)
@@ -880,15 +882,14 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 				    }
 
 				    if(isset($o['alias']['name']) && !empty($o['alias']['name'])) {
-					    $order_by .= "`" . $o['alias']['name'] . "`" . ' ' . $o['direction'];
-					    $order_by_coord .= "`" . $o['alias']['name'] . "`" . ' ' . $o['direction'];
+					    $order_by .= "`" . trim($o['alias']['name'], "`") . "`" . ' ' . $o['direction'];
+					    $order_by_coord .= "`" . trim($o['alias']['name'], "`") . "`" . ' ' . $o['direction'];
 				    } else {
-					    $order_by .= "`" . $o['base_expr'] . "`" . ' ' . $o['direction'];
-
-						if($o['origParse']['sub_tree'] !== false) {
-						    $base = "_" . $this->buildEscapedString(array($o['origParse']));
+					    $order_by .= "`" . trim($o['base_expr'], "`") . "`" . ' ' . $o['direction'];
+						if(isset($o['origParse']['sub_tree']) && $o['origParse']['sub_tree'] !== false) {
+						    $base = "_" . buildEscapedString(array($o['origParse']));
 						} else {
-							$base = $o['base_expr'];
+							$base = trim(getBaseExpr($o), "`");
 						}
 
 					    $order_by_coord .= "`" . $base . "`" . ' ' . $o['direction'];
@@ -915,13 +916,13 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 				foreach ($this->parsed['GROUP'] as $g) {
 				    if ($group_by)
 						$group_by .= ",";
-				    $group_by .= $g['base_expr'];
+				    $group_by .= trim(getBaseExpr($g), "`");
 
 				    if ($group_by_coord)
 						$group_by_coord .= ",";
 
-					if($o['origParse']['sub_tree'] !== false) {
-					    $base = "_" . $this->buildEscapedString(array($g['origParse']));
+					if(isset($g['origParse']['sub_tree']) && $g['origParse']['sub_tree'] !== false) {
+					    $base = "_" . buildEscapedString(array($g['origParse']));
 					} else {
 						$base = $g['base_expr'];
 					}
@@ -1023,34 +1024,6 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 		return true;
     }
 
-    /**
-     * Function that will recursively go through the branch at the function to
-     * construct the escaped column name
-     * @param array $inNode SQL parse tree node
-     * @return string parts of the escaped function name
-     */
-    function buildEscapedString($inNode) {
-        $str = "";
-
-        foreach ($inNode as $currNode) {
-            $partStr = "";
-
-            if (array_key_exists("sub_tree", $currNode) && $currNode["sub_tree"] !== false) {
-                $partStr = $this->buildEscapedString($currNode["sub_tree"]);
-            }
-
-            $partStr = str_replace(".", "__", $partStr);
-
-            if ($currNode["expr_type"] === "aggregate_function" ||
-                    $currNode['expr_type'] === "function") {
-                $str .= $currNode["base_expr"] . "_" . $partStr;        #last "_" already added below
-            } else {
-                $str .= $currNode["base_expr"] . "_";
-            }
-        }
-
-        return $str;
-    }
 
 }
 

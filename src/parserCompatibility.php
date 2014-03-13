@@ -47,24 +47,4 @@
 		}
 	}
 
-	function getBaseExpr($node) {
-		$return = $node['base_expr'];
-
-		if($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function") {
-			$return .= "(";
-		}
-
-		if($node['sub_tree'] !== false) {
-			foreach($node['sub_tree'] as $subNode) {
-				$return .= getBaseExpr($subNode);
-			}
-		}
-
-		if($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function") {
-			$return .= ")";
-		}
-
-		return $return;
-	}
-
 ?>
