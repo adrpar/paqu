@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard.aggregation_tmp_84743582 ENGINE=MyISAM SELECT i AS `i` FROM `bar`.`barbar` WHERE (  i > 1 )    LIMIT 0
-USE spider_tmp_shard; INSERT INTO spider_tmp_shard.aggregation_tmp_84743582 SELECT i AS `i` FROM `bar`.`barbar` WHERE (  i > 1 )   ; CALL paquLinkTmp('aggregation_tmp_84743582')
+CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard.aggregation_tmp_84743582 ENGINE=MyISAM SELECT i AS `i` FROM `bar`.`barbar` WHERE   i > 1     LIMIT 0
+USE spider_tmp_shard; INSERT INTO spider_tmp_shard.aggregation_tmp_84743582 SELECT i AS `i` FROM `bar`.`barbar` WHERE   i > 1    ; CALL paquLinkTmp('aggregation_tmp_84743582')
 USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `i` FROM `aggregation_tmp_84743582`   
 CALL paquDropTmp('aggregation_tmp_84743582')

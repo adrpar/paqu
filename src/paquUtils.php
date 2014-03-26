@@ -106,14 +106,18 @@ function isColumnInTable($column, $table) {
  * @param array $inNode SQL parse tree node
  * @return string parts of the escaped function name
  */
-function buildEscapedString($inNode) {
-    $str = "";
+function buildEscapedString($inNode, $addInitialPrefix = true) {
+	$str = "";
+
+    if($addInitialPrefix === true) {
+	    $str = "_";
+    }
 
     foreach ($inNode as $currNode) {
         $partStr = "";
 
         if (array_key_exists("sub_tree", $currNode) && $currNode["sub_tree"] !== false) {
-            $partStr = buildEscapedString($currNode["sub_tree"]);
+            $partStr = buildEscapedString($currNode["sub_tree"], false);
         }
 
         $partStr = str_replace(".", "__", $partStr);
@@ -133,17 +137,38 @@ function buildEscapedString($inNode) {
 }
 
 function getBaseExpr($node) {
-	$return = $node['base_expr'];
+	$return = "";
 
 	if($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function") {
+		//check if the function base_expression is already fully resolved or is a vanilla
+		//base_expr from the parser - parser does not include the brackets
+		//if this is already resolved, we need to remove everything until the first bracket
+		//to retrieve the function name
+		if(strpos($node['base_expr'], "(") === false) {
+			$return = $node['base_expr'];
+		} else {
+			$tmp = explode("(", $node['base_expr']);
+			$return = $tmp[0];
+		}
+
 		$return .= "(";
 	}
 
-	if(isset($node['sub_tree']) && $node['sub_tree'] !== false) {
+	if(isset($node['sub_tree']) && $node['sub_tree'] !== false && $node['expr_type'] !== 'subquery') {
 		$tmp = "";
 		
+		$count = 0;
+		$max = count($node['sub_tree']);
 		foreach($node['sub_tree'] as $subNode) {
 			$tmp .= getBaseExpr($subNode);
+			$count++;
+
+			if($count < $max &&
+					($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function")) {
+				$tmp .= ", ";
+			} else if($count < $max) {
+				$tmp .= " ";
+			}
 		}
 
 		//could be, that we gathered the stuff here and it was already there... then don't append
@@ -154,6 +179,8 @@ function getBaseExpr($node) {
 
 	if($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function") {
 		$return .= ")";
+	} else if ($node['expr_type'] !== "expression") {
+		$return = $node['base_expr'];
 	}
 
 	return $return;
@@ -315,7 +342,7 @@ function extractColumnName($node) {
 
 		//if this is a "*" node, as in SELECT * FROM, then the no_quotes part is not present
 		//and it does not make sense to extract anything anyways
-		if(!isset($nodes['no_quotes'])) {
+		if(!isset($node['no_quotes'])) {
 			return false;
 		}
 

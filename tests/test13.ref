@@ -1,5 +1,5 @@
-CALL paquExec('SELECT x  AS `haloX`,y  AS `haloY`,z  AS `haloZ`,Rvir  AS `hR` FROM MDR1.BDMV WHERE (  bdmId = 6200000001 )   ', 'aggregation_tmp_29382244')
-CALL paquExec('SELECT p.particleId AS `p.particleId`,p.x AS `p.x`,p.y AS `p.y`,p.z AS `p.z` FROM MDR1.Particles62 AS `p` JOIN ( SELECT `haloX`,`haloY`,`haloZ`,`hR` FROM `aggregation_tmp_29382244`   ) AS `h`  WHERE (  POWER (  `h`.`haloX` - p.x, 2 ) + POWER (  `h`.`haloY` - p.y, 2 ) + POWER (  `h`.`haloZ` - p.z, 2 ) <= `h`.`hR` * `h`.`hR` )   ', 'aggregation_tmp_89433772')
+CALL paquExec('SELECT x  AS `haloX`,y  AS `haloY`,z  AS `haloZ`,Rvir  AS `hR` FROM MDR1.BDMV WHERE   bdmId = 6200000001    ', 'aggregation_tmp_29382244')
+CALL paquExec('SELECT p.particleId AS `p.particleId`,p.x AS `p.x`,p.y AS `p.y`,p.z AS `p.z` FROM MDR1.Particles62 AS `p` JOIN ( SELECT `haloX`,`haloY`,`haloZ`,`hR` FROM `aggregation_tmp_29382244`   ) AS `h`  WHERE   POWER (  `h`.`haloX` - p.x, 2 ) + POWER (  `h`.`haloY` - p.y, 2 ) + POWER (  `h`.`haloZ` - p.z, 2 ) <= `h`.`hR` * `h`.`hR`    ', 'aggregation_tmp_89433772')
 CALL paquDropTmp('aggregation_tmp_29382244')
 USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `p.particleId`,`p.x`,`p.y`,`p.z` FROM `aggregation_tmp_89433772`   
 CALL paquDropTmp('aggregation_tmp_89433772')

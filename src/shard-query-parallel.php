@@ -129,7 +129,7 @@ class ShardQuery {
 
                 //build escaped string
         		if(trim($alias, "`") === $clause['base_expr'] || $alias === "``") {
-	                $alias = "_" . buildEscapedString(array($clause));
+	                $alias = buildEscapedString(array($clause));
 	        		$alias = "`" . $alias . "`";
         		}
         	}
@@ -159,7 +159,7 @@ class ShardQuery {
 	    			}
 
 					$alias = "`" . substr(trim($clause['alias']['name'], "`"), 0, 50) . "`";
-					$function = $clause['base_expr'];
+					$function = strtoupper($clause['base_expr']);
 
 					switch ($function) {
 					    #these are aggregates that dont need special treatment on the coordination side
@@ -529,7 +529,7 @@ class ShardQuery {
 		foreach ($where as $pos => $clause) {
 		    $tmpSql = "";
 		    $isSubquery = false;
-		    
+
 		    if($clause['sub_tree'] !== false) {
 				foreach($clause['sub_tree'] as $key => $subNode) {
 				    if($subNode['expr_type'] == 'subquery') {
@@ -887,7 +887,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 				    } else {
 					    $order_by .= "`" . trim($o['base_expr'], "`") . "`" . ' ' . $o['direction'];
 						if(isset($o['origParse']['sub_tree']) && $o['origParse']['sub_tree'] !== false) {
-						    $base = "_" . buildEscapedString(array($o['origParse']));
+						    $base = buildEscapedString(array($o['origParse']));
 						} else {
 							$base = trim(getBaseExpr($o), "`");
 						}
@@ -922,7 +922,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 						$group_by_coord .= ",";
 
 					if(isset($g['origParse']['sub_tree']) && $g['origParse']['sub_tree'] !== false) {
-					    $base = "_" . buildEscapedString(array($g['origParse']));
+					    $base = buildEscapedString(array($g['origParse']));
 					} else {
 						$base = $g['base_expr'];
 					}

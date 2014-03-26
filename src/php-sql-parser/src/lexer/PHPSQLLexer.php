@@ -97,7 +97,12 @@ class PHPSQLLexer {
 
             for ($i = $splitLen; $i > 0; $i--) {
                 $substr = substr($sql, $pos, $i);
-                if ($this->splitters->isSplitter($substr)) {
+                if($this->splitters->isNoSplitter($substr)) {
+                    $token .= $substr;
+                    $pos += $i;
+
+                    continue 2;
+                } else if ($this->splitters->isSplitter($substr)) {
 
                     if ($token !== "") {
                         $tokens[] = $token;

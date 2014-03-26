@@ -54,6 +54,7 @@ class LexerSplitter {
     protected static $splitters = array("<=>", "\r\n", "!=", ">=", "<=", "<>", "<<", ">>", ":=", "\\", "&&", "||", ":=",
                                        "/*", "*/", "--", ">", "<", "|", "=", "^", "(", ")", "\t", "\n", "'", "\"", "`",
                                        ",", "@", " ", "+", "-", "*", "/", ";");
+    protected static $noSplitters = array("E-", "e-");
     protected $tokenSize;
     protected $hashSet;
 
@@ -65,6 +66,7 @@ class LexerSplitter {
     public function __construct() {
         $this->tokenSize = strlen(self::$splitters[0]); // should be the largest one
         $this->hashSet = array_flip(self::$splitters);
+        $this->hashSetNoSplit = array_flip(self::$noSplitters);
     }
 
     /**
@@ -89,6 +91,10 @@ class LexerSplitter {
      */
     public function isSplitter($token) {
         return isset($this->hashSet[$token]);
+    }
+
+    public function isNoSplitter($token) {
+        return isset($this->hashSetNoSplit[$token]);
     }
 }
 

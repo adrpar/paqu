@@ -114,7 +114,9 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 	$subQueries = array();
 	if(!empty($sqlTree['FROM'])) {
 		foreach ($sqlTree['FROM'] as $subQuery) {
-			if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
+			if ($subQuery['expr_type'] == 'subquery') {
+				//TODO: GET RID OF LINE BELOW
+				$subQuery['table'] = "DEPENDENT-SUBQUERY";
 				$subQuery['sub_tree'] = PHPSQLbuildShardQuery($subQuery['sub_tree']);
 				array_push($subQueries, $subQuery);
 			}
@@ -123,6 +125,7 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 	if (!empty($sqlTree['WHERE'])) {
 		foreach ($sqlTree['WHERE'] as $node) {
 			if ($node['expr_type'] == 'subquery') {
+				$node['table'] = "DEPENDENT-SUBQUERY";
 				$node['sub_tree'] = PHPSQLbuildShardQuery($node['sub_tree']);
 				array_push($subQueries, $node);
 			}
@@ -152,6 +155,7 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 //var_dump($nestedQuery); die(0);
 	linkNestedWheresToTree($nestedQuery, $subQueries);
 //var_dump($nestedQuery); die(0);
+
 	return $nestedQuery;
 }
 
@@ -212,7 +216,7 @@ function linkSubqueriesToTree(&$nestedQuery, &$subQueries) {
 
 	//fix subquery tree first
 	foreach ($nestedQuery['FROM'] as &$subQuery) {
-		if ($subQuery['table'] == 'DEPENDENT-SUBQUERY') {
+		if ($subQuery['expr_type'] == 'subquery') {
 			#we need to descend further down.
 			linkSubqueriesToTree($subQuery['sub_tree'], $subQueries);
 
@@ -221,7 +225,7 @@ function linkSubqueriesToTree(&$nestedQuery, &$subQueries) {
 				if (array_key_exists('alias', $subQuery) && $subQuery['alias']['name'] == $subNode['alias']['name']) {
 					//push this further down if needed
 					foreach($subQuery['sub_tree']['FROM'] as &$currQueryNode) {
-						if($currQueryNode['table'] == 'DEPENDENT-SUBQUERY') {
+						if($currQueryNode['expr_type'] == 'subquery') {
 							linkSubqueriesToTree($currQueryNode['sub_tree'], $subQueries);
 						}
 					}
@@ -238,7 +242,7 @@ function linkSubqueriesToTree(&$nestedQuery, &$subQueries) {
 	$columnList = array();
 
 	foreach ($nestedQuery['FROM'] as $fromNode) {
-		if($fromNode['table'] === "DEPENDENT-SUBQUERY") {
+		if($fromNode['expr_type'] === "subquery") {
 			$currSubNode = $fromNode['sub_tree'];
 			$currAlias = trim($fromNode['alias']['name'], "`");
 
@@ -283,7 +287,7 @@ function fixSelectsInAliasedSubquery(&$selectTree, &$subQuery, $tableAlias) {
 	$columnList = array();
 
 	foreach ($selectTree['FROM'] as $fromNode) {
-		if($fromNode['table'] === "DEPENDENT-SUBQUERY") {
+		if($fromNode['expr_type'] === "subquery") {
 			$currSubNode = $fromNode['sub_tree'];
 			$currAlias = trim($fromNode['alias']['name'], "`");
 
@@ -388,7 +392,8 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 	#now that we know where to start, build the SELECT tree
 	$currDepQueryNode = array();
 	$currDepQueryNode['table'] = 'DEPENDENT-SUBQUERY';
-	if(!empty($table['alias']['name'])) {
+	$currDepQueryNode['expr_type'] = "subquery";
+	if(hasAlias($table)) {
 		$currDepQueryNode['alias'] = $table['alias'];
 		//createAliasNode
 	} else {
@@ -468,7 +473,7 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
  * 
  */
 function cleanSelectToResembleQuery(&$initialQuery, &$newQuery) {
-	foreach($newQuery['SELECT'] as $key => $node) {
+	foreach($newQuery['SELECT'] as $key => &$node) {
 		if(hasAlias($node)) {
 			$colTable = extractTableName($node['alias']);
 			$colName = extractColumnName($node['alias']);
@@ -477,6 +482,29 @@ function cleanSelectToResembleQuery(&$initialQuery, &$newQuery) {
 			$colName = extractColumnName($node);
 		}
 
+		//first check thoroughly if a column might exist
+		foreach($initialQuery['SELECT'] as $initNode) {
+			if(columnIsEqual($initNode, $node) ||
+					(hasAlias($node) && hasAlias($initNode) &&
+					  aliasIsEqual($initNode['alias'], $node['alias']))) {
+
+				//alias the column to resemble the original requested name
+				if(!hasAlias($node)) {
+					if($node['expr_type'] === "colref") {
+						//if this is a "*" (as in SELECT * FROM) node, no_quotes is not set
+						if(isset($initNode['no_quotes'])) {
+							$node['alias'] = createAliasNode(array(implode(".", $initNode['no_quotes']['parts'])));
+						}
+					} else {
+						$node['alias'] = createAliasNode(array(buildEscapedString(array($node))));
+					}
+				}
+
+				continue 2;
+			}
+		}
+
+		//now do a fuzzy check
 		foreach($initialQuery['SELECT'] as $initNode) {
 			if(columnIsEqual($initNode, $node, true) ||
 					(hasAlias($node) && hasAlias($initNode) &&
@@ -490,7 +518,7 @@ function cleanSelectToResembleQuery(&$initialQuery, &$newQuery) {
 							$node['alias'] = createAliasNode(array(implode(".", $initNode['no_quotes']['parts'])));
 						}
 					} else {
-						$node['alias'] = buildEscapedString(array($node));
+						$node['alias'] = createAliasNode(array(buildEscapedString(array($node))));
 					}
 				}
 
@@ -680,6 +708,7 @@ function PHPSQLaddAggregateTwoPassSubQuery(&$toThisNode) {
 
 	$currAgrParentNode = array();
 	$currAgrParentNode['table'] = 'DEPENDENT-SUBQUERY';
+	$currAgrParentNode['expr_type'] = "subquery";
 	$currAgrParentNode['alias']['name'] = '`agr_' . trim($fromQuery[0]['alias']['name'], '`') . '`';
 	$currAgrParentNode['join_type'] = "JOIN";
 	$currAgrParentNode['ref_type'] = '';
@@ -1176,11 +1205,13 @@ function PHPSQLrewriteAliasWhere(&$node, $tableList, $recLevel, &$toThisNode) {
 			}
 		}
 	
-		if($node['expr_type'] === "function") {
+			$new_base_expr = getBaseExpr($node);
+			$node['base_expr'] = $new_base_expr;
+		/*if($node['expr_type'] === "function") {
 			$node['base_expr'] = $new_base_expr . " )";
 		} else {
 			$node['base_expr'] = "( " . $new_base_expr . " )";
-		}
+		}*/
 	}
 }
 
@@ -1267,7 +1298,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 		$tblName = $tmp[1];
 	}
 
-	if(!empty($table['alias']['name'])) {
+	if(hasAlias($table)) {
 		$tblAlias = $table['alias']['name'];
 	} else {
 		$tblAlias = $tblName;
@@ -1296,7 +1327,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 			foreach ($toThisNode['SELECT'] as $selNode) {
 				if (trim($selNode['base_expr'], ' ') == $parsed[0]['base_expr'] ||
 							 trim($selNode['alias']['name']) == trim($node['base_expr'])) {
-					if(!empty($parsed[0]['alias']['name'])) {
+					if(hasAlias($parsed[0])) {
 						$node['alias']['name'] = $parsed[0]['alias']['name'];
 					} else {
 						$node['alias'] = false;
@@ -1341,7 +1372,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 
 						if($currColTbl === false || trim($currColTbl, "`") === trim($currTblName, "`")) {
 							//process this order by...
-							if(isset($parsed[0]['alias']['name'])) {
+							if(hasAlias($parsed[0])) {
 								$node['alias']['name'] = $parsed[0]['alias']['name'];
 							}
 						} else if (strpos($column['base_expr'], "*") !== false) {
@@ -1355,12 +1386,8 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 
 				//if we endup here, this is a column that was not aliased and not found in the SELECT list
 				//use this if it has no reference to a table
-				if(isset($parsed[0]['alias']['name']) && strpos($parsed[0]['alias']['name'], ".") === false) {
-					if(!empty($parsed[0]['alias']['name'])) {
-						$node['alias']['name'] = $parsed[0]['alias']['name'];
-					} else {
-						$node['alias'] = false;
-					}
+				if(hasAlias($parsed[0]) && strpos($parsed[0]['alias']['name'], ".") === false) {
+					$node['alias'] = $parsed[0]['alias'];
 				}
 			}
 
@@ -1383,11 +1410,11 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 				#check on recLevel because unaliased order bys apply to top level table (and sql parser decides which one to take)
 				#TODO: CANDIATE FOR DIFFERENT HANDLING BELLOW:
 				if (count($tmpTblAlias) == 1 && count($tmp) == 1 && !is_numeric($node['base_expr']) && $recLevel == 0) {
-					if(!empty($node['alias']['name'])) {
+					if(hasAlias($node)) {
 						$node['alias']['name'] = trim($node['alias']['name'], "`");
 					}
 					$parsed[0]['base_expr'] = $node['base_expr'];
-					if(!empty($node['alias']['name'])) {
+					if(hasAlias($node)) {
 						$parsed[0]['alias']['name'] = $node['alias']['name'];
 					}
 
@@ -1484,7 +1511,7 @@ function PHPSQLaddOuterQueryGroup(&$sqlTree, &$table, &$toThisNode, &$tableList,
 		$tblName = $tmp[1];
 	}
 
-	if(!empty($table['alias']['name'])) {
+	if(hasAlias($table)) {
 		$tblAlias = $table['alias']['name'];
 	} else {
 		$tblAlias = $tblName;
@@ -1511,7 +1538,7 @@ function PHPSQLaddOuterQueryGroup(&$sqlTree, &$table, &$toThisNode, &$tableList,
 		if ($countDep == 0) {
 			$node['expr_type'] = $parsed[0]['expr_type'];
 
-			if(!empty($parsed[0]['alias']['name'])) {
+			if(hasAlias($parsed[0])) {
 				$node['alias']['name'] = $parsed[0]['alias']['name'];
 			} else {
 				$node['alias'] = false;
@@ -1595,6 +1622,11 @@ function PHPSQLaddOuterQueryFrom(&$sqlTree, &$table, &$toThisNode, $tableList, $
 	}
 
 	foreach ($sqlTree['FROM'] as $key => $node) {
+		//TODO: GET RID OF THIS BELOW
+		if($node['expr_type'] === "subquery") {
+			$node['table'] = "DEPENDENT-SUBQUERY";
+		}
+
 		$tmp = explode('.', $node['table']);
 
 		if (count($tmp) == 1) {
@@ -1685,8 +1717,12 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
 	}
 
 	foreach ($workload as $node) {
-		if (isset($node['expr_type']) && $node['expr_type'] != 'colref' && isset($node['sub_tree']) && $node['sub_tree'] !== false) {
-			$countDiffTables += PHPSQLcollectColumns($node['sub_tree'], $tblDb, $tblName, $tblAlias, $returnArray, $tableList, $recLevel, false);
+		if (isset($node['expr_type']) && $node['expr_type'] != 'colref') {
+			if(isset($node['sub_tree']) && $node['sub_tree'] !== false)	 {
+				$countDiffTables += PHPSQLcollectColumns($node['sub_tree'], $tblDb, $tblName, $tblAlias, $returnArray, $tableList, $recLevel, false);
+			} else {
+				$countDiffTables = 0;
+			}
 
 			if ($startBranch === true && $countDiffTables == 0) {
 				array_push($returnArray, $node);
@@ -1889,6 +1925,7 @@ function PHPSQLdetStartTable($tableList, $headNodeTables = array(), $dependantLi
 	#sort the table and return
 	$condCount = array();
 	foreach ($tableList as $key => $table) {
+		//TODO: SOLVE THIS BELOW
 	 if ($table['name'] != "DEPENDENT-SUBQUERY") {
 		 $condCount[$key] = $table['cond_count'];
 
@@ -2168,6 +2205,7 @@ function PHPSQLGroupTablesAndCols($sqlTree, &$listOfTables) {
 			$table['no_quotes'] = $currTable['no_quotes'];
 		} else if($currTable['expr_type'] === "subquery") {
 			$table['name'] = "DEPENDENT-SUBQUERY";
+			$table['expr_type'] = "subquery";
 			$table['no_quotes'] = false;
 		} else {
 			throw new Exception("Unsupported clause in FROM");
@@ -2182,6 +2220,7 @@ function PHPSQLGroupTablesAndCols($sqlTree, &$listOfTables) {
 	//put dependant queries at the end of the list
 	$currIndex = count($listOfTables) - 1;
 	foreach ($listOfTables as $key => $node) {
+		//TODO: SOLVE THIS BELOW!
 		if ($node['name'] == 'DEPENDENT-SUBQUERY' && $key < $currIndex) {
 			$tmpNode = $listOfTables[$currIndex];
 			$listOfTables[$currIndex] = $node;
