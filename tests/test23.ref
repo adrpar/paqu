@@ -1,0 +1,6 @@
+CALL paquExec('SELECT b.niceCol AS `b.niceCol` FROM niceTbl AS `b` ', 'aggregation_tmp_49583196')
+CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard.aggregation_tmp_20888221 ENGINE=MyISAM SELECT `h`.`b.niceCol` AS `h.niceCol` FROM ( SELECT `b.niceCol` FROM `aggregation_tmp_49583196`   ) AS `h`  LIMIT 0
+USE spider_tmp_shard; INSERT INTO spider_tmp_shard.aggregation_tmp_20888221 SELECT `h`.`b.niceCol` AS `h.niceCol` FROM ( SELECT `b.niceCol` FROM `aggregation_tmp_49583196`   ) AS `h` ; CALL paquLinkTmp('aggregation_tmp_20888221')
+CALL paquDropTmp('aggregation_tmp_49583196')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `h.niceCol` FROM `aggregation_tmp_20888221`   
+CALL paquDropTmp('aggregation_tmp_20888221')

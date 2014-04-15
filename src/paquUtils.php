@@ -151,7 +151,9 @@ function getBaseExpr($node) {
 			$return = $tmp[0];
 		}
 
-		$return .= "(";
+		$return .= "( ";
+	} else if ($node['expr_type'] === "bracket_expression") {
+		$return .= "( ";
 	}
 
 	if(isset($node['sub_tree']) && $node['sub_tree'] !== false && $node['expr_type'] !== 'subquery') {
@@ -177,9 +179,10 @@ function getBaseExpr($node) {
 		}
 	}
 
-	if($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function") {
-		$return .= ")";
-	} else if ($node['expr_type'] !== "expression") {
+	if($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function" || 
+				$node['expr_type'] === "bracket_expression") {
+		$return .= " )";
+	} else if ($node['expr_type'] !== "expression" && $node['expr_type'] !== "bracket_expression") {
 		$return = $node['base_expr'];
 	}
 
@@ -305,6 +308,30 @@ function extractDbName($node) {
 	}
 }
 
+function extractTableAlias($node) {
+	if(isset($node['expr_type']) && ($node['expr_type'] === "table" || $node['expr_type'] === "subquery")
+		&& isset($node['alias']['as'])) {
+		$partCounts = count($node['alias']['no_quotes']['parts']);
+
+		//a table node
+		return $node['alias']['no_quotes']['parts'][ $partCounts - 1 ];
+	} else if ( (isset($node['expr_type']) && $node['expr_type'] === "colref") &&
+				 isset($node['alias']['as']) ) {
+
+		$partCounts = count($node['alias']['no_quotes']['parts']);
+
+		if($partCounts > 1) {
+			return $node['alias']['no_quotes']['parts'][ $partCounts - 2 ];
+		} else {
+			return false;
+		}
+
+	} else {
+		//don't know what to do
+		return false;
+	}
+}
+
 function extractTableName($node) {
 	//is this a table type or colref/alias?
 	if(isset($node['expr_type']) && $node['expr_type'] === "table") {
@@ -317,7 +344,7 @@ function extractTableName($node) {
 
 		//if this is a "*" node, as in SELECT * FROM, then the no_quotes part is not present
 		//and it does not make sense to extract anything anyways
-		if(!isset($nodes['no_quotes'])) {
+		if(!isset($node['no_quotes'])) {
 			return false;
 		}
 
@@ -329,6 +356,20 @@ function extractTableName($node) {
 			return false;
 		}
 
+	} else {
+		//don't know what to do
+		return false;
+	}
+}
+
+function extractColumnAlias($node) {
+	//is this a table type or colref/alias?
+	if ( (isset($node['expr_type']) && $node['expr_type'] === "colref") &&
+				 isset($node['alias']['as']) ) {
+
+		$partCounts = count($node['alias']['no_quotes']['parts']);
+
+		return $node['alias']['no_quotes']['parts'][ $partCounts - 1 ];
 	} else {
 		//don't know what to do
 		return false;

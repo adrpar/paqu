@@ -1,3 +1,3 @@
-CALL paquExec('SELECT x AS `x`,y AS `y`,z AS `z` FROM MDR1.Particles85 WHERE   RAND (154321) <= 2.91E-5    ', 'aggregation_tmp_43215833')
+CALL paquExec('SELECT x AS `x`,y AS `y`,z AS `z` FROM MDR1.Particles85 WHERE (  RAND (154321) <= 2.91E-5  )  ', 'aggregation_tmp_43215833')
 USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `x`,`y`,`z` FROM `aggregation_tmp_43215833`   
 CALL paquDropTmp('aggregation_tmp_43215833')

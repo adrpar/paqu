@@ -69,4 +69,16 @@ echo runTest("SELECT sprng_make_seed(), count(abs(*));", "test21.ref");
 echo "Test 22\n";
 echo runTest("SELECT t1.a, count(*) from t1, t2, t3 where t1.id = t2.t1_id and t3.id = t2.date_id group by t1.a;", "test22.ref");
 
+echo "Test 23\n";
+echo runTest("SELECT h.niceCol FROM (SELECT b.niceCol FROM niceTbl as b) as h", "test23.ref");
+
+echo "Test 24\n";
+echo runTest("SELECT f3.fofId, p.x,p.y,p.z FROM MDR1.FOFParticles f, MDR1.FOFParticles3 f3, MDR1.particles85 p WHERE f.fofId = 85000000479 AND f.particleId = f3.particleId AND p.particleId = f.particleId ORDER BY f3.fofId ASC", "test24.ref");
+
+echo "Test 25\n";
+echo runTest("SELECT x FROM table WHERE ( x = 0.998373 ) or ( ( y = SIN (0.998373) ) and ( z = 0.998373 ) ) and ( z = 43 ) or ( ( ( z = 23 ) and ( z = 4 ) ) or ( x = 1 ) ) or ( y = 34 ) and ( x between 1 and 2 ) or ( z = 1 + 5 * 87.2134 )", "test25.ref");
+
+echo "Test 26\n";
+echo runTest("SELECT x FROM table WHERE x=0.998373 or (y=sin(0.998373) and z=0.998373) and z=43 or ((z=23 and z=4) or x=1) or y=34 and x between 1 and 2", "test26.ref");
+
 ?>
