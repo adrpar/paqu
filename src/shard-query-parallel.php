@@ -32,7 +32,6 @@
 /* It also requires Console_Getopt, but this should be installed by default with pear */
 require_once 'php-sql-parser/src/PHPSQLParser.php';
 require_once 'parOptimImplicitJoin.php';
-require_once 'parserCompatibility.php';
 require_once 'paquUtils.php';
 #$params = get_commandline();
 #FIXME: This should not extend MySQLDAl, but should create a new DL object
@@ -302,11 +301,6 @@ class ShardQuery {
 					break;
 
 				case 'expression':
-		    		//if this is a function without arguments, add the parenthesis
-		    		if(strpos($base_expr, "(") === false) {
-		    			$base_expr .= "()";
-		    		}
-
 				case 'operator':
 				case 'const':
 				case 'colref':
@@ -752,10 +746,6 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 	    #$this->parsed = $this->client->do('sql_parse',$sql);
 	    $parser = new PHPSQLParser($sql);
 
-	    //make things compatible and add stuff that was in the old version of the parser to the new version
-	    //TODO: remove or change things that are quirkily added here
-//	    addAliasToAll($parser->parsed);
-
 	    $this->parsed = PHPSQLbuildShardQuery($parser->parsed, $this->headNodeTables);
 	    $this->parsedCopy = $this->parsed;
 	} else {
@@ -889,7 +879,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 						if(isset($o['origParse']['sub_tree']) && $o['origParse']['sub_tree'] !== false) {
 						    $base = buildEscapedString(array($o['origParse']));
 						} else {
-							$base = trim(getBaseExpr($o), "`");
+							$base = str_replace("`", "", getBaseExpr($o));
 						}
 
 					    $order_by_coord .= "`" . $base . "`" . ' ' . $o['direction'];
@@ -916,7 +906,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 				foreach ($this->parsed['GROUP'] as $g) {
 				    if ($group_by)
 						$group_by .= ",";
-				    $group_by .= trim(getBaseExpr($g), "`");
+					$group_by = str_replace("`", "", getBaseExpr($g));
 
 				    if ($group_by_coord)
 						$group_by_coord .= ",";

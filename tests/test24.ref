@@ -1,6 +1,6 @@
-CALL paquExec('SELECT f.fofId AS `f.fofId`,f.particleId AS `f.particleId` FROM MDR1.FOFParticles AS `f` WHERE ( f.fofId = 85000000479 )  ', 'aggregation_tmp_1969334')
-CALL paquExec('SELECT p.x AS `p.x`,p.y AS `p.y`,p.z AS `p.z`,p.particleId AS `p.particleId` FROM MDR1.particles85 AS `p` JOIN ( SELECT `f.fofId`,`f.particleId` FROM `aggregation_tmp_1969334`   ) AS `f`  WHERE ( p.particleId = `f`.`f.particleId` )  ', 'aggregation_tmp_20305440')
-CALL paquExec('SELECT f3.fofId AS `f3.fofId`,p.`p.x` AS `p.x`,p.`p.y` AS `p.y`,p.`p.z` AS `p.z` FROM MDR1.FOFParticles3 AS `f3` JOIN ( SELECT `p.x`,`p.y`,`p.z`,`p.particleId` FROM `aggregation_tmp_20305440`   ) AS `p`  WHERE( p.`p.particleId` = f3.particleId )  ', 'aggregation_tmp_10309017')
+CALL paquExec('SELECT f.fofId AS `f.fofId`,f.particleId AS `f.particleId` FROM MDR1.FOFParticles AS `f` WHERE ( `f`.`fofId` = 85000000479 )  ', 'aggregation_tmp_1969334')
+CALL paquExec('SELECT p.x AS `p.x`,p.y AS `p.y`,p.z AS `p.z`,p.particleId AS `p.particleId` FROM MDR1.particles85 AS `p` JOIN ( SELECT `f.fofId`,`f.particleId` FROM `aggregation_tmp_1969334`   ) AS `f`  WHERE ( `p`.`particleId` = `f`.`f.particleId` )  ', 'aggregation_tmp_20305440')
+CALL paquExec('SELECT f3.fofId AS `f3.fofId`,`p`.`p.x` AS `p.x`,`p`.`p.y` AS `p.y`,`p`.`p.z` AS `p.z` FROM MDR1.FOFParticles3 AS `f3` JOIN ( SELECT `p.x`,`p.y`,`p.z`,`p.particleId` FROM `aggregation_tmp_20305440`   ) AS `p`  WHERE( `p`.`p.particleId` = `f3`.`particleId` )  ', 'aggregation_tmp_10309017')
 CALL paquDropTmp('aggregation_tmp_1969334')
 CALL paquDropTmp('aggregation_tmp_20305440')
 USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `f3.fofId`,`p.x`,`p.y`,`p.z` FROM `aggregation_tmp_10309017`  ORDER BY `f3.fofId` ASC 

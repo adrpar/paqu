@@ -1,0 +1,9 @@
+CALL paquExec('SELECT COUNT(`a`) AS `ca`, COUNT(`b`) AS `cnt_ab`, SUM(`b`) AS `sum_ab` FROM tblA ', 'aggregation_tmp_17731116')
+CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard.aggregation_tmp_29954969  ENGINE=MyISAM SELECT SUM(`h`.`ca` + `h`.`ab`) AS `total` FROM ( SELECT SUM(`ca`) AS `ca`, (SUM(`sum_ab`) / SUM(`cnt_ab`)) AS `ab` FROM `aggregation_tmp_17731116`   ) AS `h`  LIMIT 0
+USE spider_tmp_shard; INSERT INTO spider_tmp_shard.aggregation_tmp_29954969 SELECT SUM(`h`.`ca` + `h`.`ab`) AS `total` FROM ( SELECT SUM(`ca`) AS `ca`, (SUM(`sum_ab`) / SUM(`cnt_ab`)) AS `ab` FROM `aggregation_tmp_17731116`   ) AS `h` ; CALL paquLinkTmp('aggregation_tmp_29954969')
+CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard.aggregation_tmp_54945787 ENGINE=MyISAM SELECT 2.0*`p`.`total` AS `totalTwo` FROM ( SELECT SUM(`total`) AS `total` FROM `aggregation_tmp_29954969`   ) AS `p`  LIMIT 0
+USE spider_tmp_shard; INSERT INTO spider_tmp_shard.aggregation_tmp_54945787 SELECT 2.0*`p`.`total` AS `totalTwo` FROM ( SELECT SUM(`total`) AS `total` FROM `aggregation_tmp_29954969`   ) AS `p` ; CALL paquLinkTmp('aggregation_tmp_54945787')
+CALL paquDropTmp('aggregation_tmp_17731116')
+CALL paquDropTmp('aggregation_tmp_29954969')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `totalTwo` FROM `aggregation_tmp_54945787`   
+CALL paquDropTmp('aggregation_tmp_54945787')

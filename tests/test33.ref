@@ -1,0 +1,5 @@
+CALL paquExec('SELECT t2.salary AS `t2.salary`,t2.name AS `t2.name` FROM info AS `t2` ', 'aggregation_tmp_56252852')
+CALL paquExec('SELECT t1.name AS `t1.name`,`t2`.`t2.salary` AS `t2.salary` FROM employee AS `t1` JOIN ( SELECT `t2.salary`,`t2.name` FROM `aggregation_tmp_56252852`   ) AS `t2` WHERE `t1.name` = `t2.name` ', 'aggregation_tmp_45057636')
+CALL paquDropTmp('aggregation_tmp_56252852')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `t1.name`,`t2.salary` FROM `aggregation_tmp_45057636`   
+CALL paquDropTmp('aggregation_tmp_45057636')

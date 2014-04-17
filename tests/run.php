@@ -81,4 +81,28 @@ echo runTest("SELECT x FROM table WHERE ( x = 0.998373 ) or ( ( y = SIN (0.99837
 echo "Test 26\n";
 echo runTest("SELECT x FROM table WHERE x=0.998373 or (y=sin(0.998373) and z=0.998373) and z=43 or ((z=23 and z=4) or x=1) or y=34 and x between 1 and 2", "test26.ref");
 
+echo "Test 27\n";
+echo runTest("SELECT `h`.`ca`+`h`.`ab` as `total` FROM (SELECT count(a) as `ca`, avg(b) as `ab` FROM tblA) as `h`", "test27.ref");
+
+echo "Test 28\n";
+echo runTest("SELECT 2.0*`p`.`total` as `totalTwo` FROM (SELECT SUM(`h`.`ca`+`h`.`ab`) as `total` FROM (SELECT count(a) as `ca`, avg(b) as `ab` FROM tblA) as `h`) as `p`", "test28.ref");
+
+echo "Test 29\n";
+echo runTest("SELECT prog.fofTreeId FROM MDR1.FOFMtree prog, MDR1.FOFMtree descend WHERE descend.fofTreeId = 85000000000 AND prog.fofTreeId BETWEEN descend.fofTreeId AND descend.lastProgId ORDER BY 1 ASC", "test29.ref");
+
+echo "Test 30\n";
+echo runTest("SELECT * FROM MDR1.FOF WHERE snapnum=85 ORDER BY MDR1.FOF.mass desc LIMIT 10", "test30.ref");
+
+echo "Test 31\n";
+echo runTest("SELECT h.snapnum FROM (SELECT snapnum, expz FROM MDR1.FOF WHERE snapnum=85 LIMIT 10) as h ORDER BY h.expz ASC", "test31.ref");
+
+echo "Test 32\n";
+echo runTest("SELECT snapnum as `snappi` FROM MDR1.FOF WHERE snapnum=85 ORDER BY `snappi` desc LIMIT 10", "test32.ref");
+
+//AT SOME POINT THIS WILL BE IMPLEMENTED:
+/*echo "Test 33\n";
+echo runTest("SELECT t1.name, t2.salary FROM employee t1 INNER JOIN info t2 ON t1.name = t2.name", "test33.ref");*/
+
+
+
 ?>

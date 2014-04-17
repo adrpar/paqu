@@ -182,6 +182,18 @@ function getBaseExpr($node) {
 	if($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function" || 
 				$node['expr_type'] === "bracket_expression") {
 		$return .= " )";
+	} else if ($node['expr_type'] === "colref" && $node['base_expr'] !== "*") {
+		$start = true;
+		
+		foreach($node['no_quotes']['parts'] as $part) {
+			if($start === false) {
+				$return .= $node['no_quotes']['delim'];
+			}
+
+			$return .= "`" . $part . "`";
+
+			$start = false;
+		}
 	} else if ($node['expr_type'] !== "expression" && $node['expr_type'] !== "bracket_expression") {
 		$return = $node['base_expr'];
 	}
@@ -301,7 +313,14 @@ function extractDbName($node) {
 		} else {
 			return false;
 		}
+	} else if(isset($node['expr_type']) && $node['expr_type'] === "colref") {
+		$partCounts = count($node['no_quotes']['parts']);
 
+		if($partCounts > 2) {
+			return $node['no_quotes']['parts'][ 0 ];
+		} else {
+			return false;
+		}
 	} else {
 		//don't know what to do
 		return false;
@@ -402,6 +421,16 @@ function hasAlias($node) {
 	} else {
 		return false;
 	}
+}
+
+function setNoQuotes(&$node, array $parts, $delim = false) {
+	if($delim !== false) {
+		$node['no_quotes']['delim'] = $delim;
+	}
+
+	$node['no_quotes']['parts'] = $parts;
+
+	$node['base_expr'] = getBaseExpr($node);
 }
 
 ?>
