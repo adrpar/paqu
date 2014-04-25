@@ -182,7 +182,7 @@ function getBaseExpr($node) {
 	if($node['expr_type'] === "function" || $node['expr_type'] === "aggregate_function" || 
 				$node['expr_type'] === "bracket_expression") {
 		$return .= " )";
-	} else if ($node['expr_type'] === "colref" && $node['base_expr'] !== "*") {
+	} else if (isColref($node) && $node['base_expr'] !== "*") {
 		$start = true;
 		
 		foreach($node['no_quotes']['parts'] as $part) {
@@ -262,7 +262,7 @@ function columnIsEqual($colA, $colB, $fuzzyMatch = false) {
 		return false;
 	}
 
-	if($colA['expr_type'] !== "colref" && $colB['expr_type'] !== "colref") {
+	if(!isColref($colA) && !isColref($colB)) {
 		if($colA === $colB) {
 			return true;
 		} else {
@@ -304,7 +304,7 @@ function columnIsEqual($colA, $colB, $fuzzyMatch = false) {
 
 function extractDbName($node) {
 	//is this a table type or something else
-	if(isset($node['expr_type']) && $node['expr_type'] === "table") {
+	if(isTable($node)) {
 		$partCounts = count($node['no_quotes']['parts']);
 
 		//a table node
@@ -313,7 +313,13 @@ function extractDbName($node) {
 		} else {
 			return false;
 		}
-	} else if(isset($node['expr_type']) && $node['expr_type'] === "colref") {
+	} else if(isColref($node)) {
+		//if this is a "*" node, as in SELECT * FROM, then the no_quotes part is not present
+		//and it does not make sense to extract anything anyways
+		if(!isset($node['no_quotes'])) {
+			return false;
+		}
+
 		$partCounts = count($node['no_quotes']['parts']);
 
 		if($partCounts > 2) {
@@ -328,13 +334,13 @@ function extractDbName($node) {
 }
 
 function extractTableAlias($node) {
-	if(isset($node['expr_type']) && ($node['expr_type'] === "table" || $node['expr_type'] === "subquery")
+	if((isTable($node) || isSubquery($node))
 		&& isset($node['alias']['as'])) {
 		$partCounts = count($node['alias']['no_quotes']['parts']);
 
 		//a table node
 		return $node['alias']['no_quotes']['parts'][ $partCounts - 1 ];
-	} else if ( (isset($node['expr_type']) && $node['expr_type'] === "colref") &&
+	} else if ( isColref($node) &&
 				 isset($node['alias']['as']) ) {
 
 		$partCounts = count($node['alias']['no_quotes']['parts']);
@@ -353,13 +359,12 @@ function extractTableAlias($node) {
 
 function extractTableName($node) {
 	//is this a table type or colref/alias?
-	if(isset($node['expr_type']) && $node['expr_type'] === "table") {
+	if(isTable($node)) {
 		$partCounts = count($node['no_quotes']['parts']);
 	
 		//a table node
 		return $node['no_quotes']['parts'][ $partCounts - 1 ];
-	} else if ( (isset($node['expr_type']) && $node['expr_type'] === "colref") ||
-				 isset($node['as']) ) {
+	} else if ( isColref($node) || isset($node['as']) ) {
 
 		//if this is a "*" node, as in SELECT * FROM, then the no_quotes part is not present
 		//and it does not make sense to extract anything anyways
@@ -383,7 +388,7 @@ function extractTableName($node) {
 
 function extractColumnAlias($node) {
 	//is this a table type or colref/alias?
-	if ( (isset($node['expr_type']) && $node['expr_type'] === "colref") &&
+	if ( isColref($node) &&
 				 isset($node['alias']['as']) ) {
 
 		$partCounts = count($node['alias']['no_quotes']['parts']);
@@ -397,8 +402,7 @@ function extractColumnAlias($node) {
 
 function extractColumnName($node) {
 	//is this a table type or colref/alias?
-	if ( (isset($node['expr_type']) && $node['expr_type'] === "colref") ||
-				 isset($node['as']) ) {
+	if ( isColref($node) || isset($node['as']) ) {
 
 		//if this is a "*" node, as in SELECT * FROM, then the no_quotes part is not present
 		//and it does not make sense to extract anything anyways
@@ -417,6 +421,46 @@ function extractColumnName($node) {
 
 function hasAlias($node) {
 	if(isset($node['alias']) && $node['alias'] !== false) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function hasSubtree($node) {
+	if(isset($node['sub_tree']) && $node['sub_tree'] !== false) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function isSubquery($node) {
+	if(isset($node['expr_type']) && $node['expr_type'] === 'subquery') {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function isOperator($node) {
+	if(isset($node['expr_type']) && $node['expr_type'] === 'operator') {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function isColref($node) {
+	if(isset($node['expr_type']) && $node['expr_type'] === 'colref') {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function isTable($node) {
+	if(isset($node['expr_type']) && $node['expr_type'] === 'table') {
 		return true;
 	} else {
 		return false;

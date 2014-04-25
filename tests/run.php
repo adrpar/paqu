@@ -103,6 +103,18 @@ echo runTest("SELECT snapnum as `snappi` FROM MDR1.FOF WHERE snapnum=85 ORDER BY
 /*echo "Test 33\n";
 echo runTest("SELECT t1.name, t2.salary FROM employee t1 INNER JOIN info t2 ON t1.name = t2.name", "test33.ref");*/
 
+//Test34
+/*SELECT b.x,b.y,b.z,b.phkey
+FROM MDPL.BDMW b
+WHERE b.snapnum=88
+ORDER BY b.Mvir DESC
+LIMIT 10*/
+
+//Test35
+/*SELECT b.bdmId, b.snapnum, r.zred, b.x,b.y,b.z,b.phkey,
+hilbertKey(10,1000.0,3,b.x,b.y,b.z) as xyzphkey FROM MDPL.BDMW b,
+MDPL.Redshifts r WHERE b.snapnum=88 AND b.snapnum = r.snapnum AND b.Mvir 1.e14 LIMIT 10*/
+
 
 
 ?>
