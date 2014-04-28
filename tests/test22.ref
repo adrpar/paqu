@@ -1,7 +1,7 @@
 CALL paquExec('SELECT `id` AS `id` FROM t3 ', 'aggregation_tmp_50785454')
 CALL paquExec('SELECT `t1_id` AS `t1_id`,`date_id` AS `date_id` FROM t2 JOIN ( SELECT `id` FROM `aggregation_tmp_50785454`   ) AS `t3`  WHERE  ( `t3`.`id` = `t2`.`date_id`  )  ', 'aggregation_tmp_27701461')
-CALL paquExec('SELECT t1.a AS `t1.a`,COUNT(*) AS `_count_*_` FROM t1 JOIN ( SELECT `t1_id`,`date_id` FROM `aggregation_tmp_27701461`   ) AS `t2`  WHERE  ( `t1`.`id` = `t2`.`t1_id`  ) GROUP BY t1.a  ', 'aggregation_tmp_56139094')
+CALL paquExec('SELECT t1.a AS `t1.a`,COUNT(`t1`.`a`)AS`_count_t1__a_` FROM t1 JOIN ( SELECT `t1_id`,`date_id` FROM `aggregation_tmp_27701461`   ) AS `t2`  WHERE  ( `t1`.`id` = `t2`.`t1_id`  ) GROUP BY t1.a  ', 'aggregation_tmp_56139094')
 CALL paquDropTmp('aggregation_tmp_50785454')
 CALL paquDropTmp('aggregation_tmp_27701461')
-USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `t1.a`,SUM(`_count_*_`) AS `_count_*_` FROM `aggregation_tmp_56139094`  GROUP BY `t1.a`  
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `t1.a`,SUM(`_count_t1__a_`) AS `_count_t1__a_` FROM `aggregation_tmp_56139094`  GROUP BY `t1.a`  
 CALL paquDropTmp('aggregation_tmp_56139094')

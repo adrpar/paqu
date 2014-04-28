@@ -67,7 +67,7 @@ echo "Test 21\n";
 echo runTest("SELECT sprng_make_seed(), count(abs(*));", "test21.ref");
 
 echo "Test 22\n";
-echo runTest("SELECT t1.a, count(*) from t1, t2, t3 where t1.id = t2.t1_id and t3.id = t2.date_id group by t1.a;", "test22.ref");
+echo runTest("SELECT t1.a, count(t1.a) from t1, t2, t3 where t1.id = t2.t1_id and t3.id = t2.date_id group by t1.a;", "test22.ref");
 
 echo "Test 23\n";
 echo runTest("SELECT h.niceCol FROM (SELECT b.niceCol FROM niceTbl as b) as h", "test23.ref");
@@ -104,16 +104,16 @@ echo runTest("SELECT snapnum as `snappi` FROM MDR1.FOF WHERE snapnum=85 ORDER BY
 echo runTest("SELECT t1.name, t2.salary FROM employee t1 INNER JOIN info t2 ON t1.name = t2.name", "test33.ref");*/
 
 //Test34
-/*SELECT b.x,b.y,b.z,b.phkey
-FROM MDPL.BDMW b
-WHERE b.snapnum=88
-ORDER BY b.Mvir DESC
-LIMIT 10*/
+echo "Test 34\n";
+echo runTest("SELECT b.x,b.y,b.z,b.phkey FROM MDPL.BDMW b WHERE b.snapnum=88 ORDER BY b.Mvir DESC LIMIT 10", "test34.ref");
 
 //Test35
-/*SELECT b.bdmId, b.snapnum, r.zred, b.x,b.y,b.z,b.phkey,
-hilbertKey(10,1000.0,3,b.x,b.y,b.z) as xyzphkey FROM MDPL.BDMW b,
-MDPL.Redshifts r WHERE b.snapnum=88 AND b.snapnum = r.snapnum AND b.Mvir 1.e14 LIMIT 10*/
+echo "Test 35\n";
+echo runTest("SELECT 2.0 + b.bdmId, b.snapnum / r.zred, r.zred, b.x,b.y,b.z,b.phkey, hilbertKey(10,1000.0,3,b.x,b.y,b.z) as xyzphkey FROM MDPL.BDMW b, MDPL.Redshifts r WHERE b.snapnum=88 AND b.snapnum = r.snapnum AND b.Mvir > 1.e14 LIMIT 10", "test35.ref");
+
+//Test36
+echo "Test 36\n";
+echo runTest("SELECT 2.0 + b.bdmId, b.snapnum / r.zred, r.zred, b.x,b.y,b.z,b.phkey, hilbertKey(10,1000.0,3,b.x,b.y,b.z) as xyzphkey FROM MDPL.BDMW b, MDPL.Redshifts r WHERE b.snapnum=88 AND b.snapnum = r.snapnum AND b.Mvir > 1.e14 ORDER BY 8 LIMIT 10", "test36.ref");
 
 
 

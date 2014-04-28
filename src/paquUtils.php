@@ -186,7 +186,7 @@ function getBaseExpr($node) {
 		$start = true;
 		
 		foreach($node['no_quotes']['parts'] as $part) {
-			if($start === false) {
+			if($start === false && array_key_exists("delim", $node['no_quotes'])) {
 				$return .= $node['no_quotes']['delim'];
 			}
 
@@ -388,7 +388,7 @@ function extractTableName($node) {
 
 function extractColumnAlias($node) {
 	//is this a table type or colref/alias?
-	if ( isColref($node) &&
+	if ( (isColref($node) || isFunction($node) || isExpression($node))  &&
 				 isset($node['alias']['as']) ) {
 
 		$partCounts = count($node['alias']['no_quotes']['parts']);
@@ -464,6 +464,52 @@ function isTable($node) {
 		return true;
 	} else {
 		return false;
+	}
+}
+
+function isFunction($node) {
+	if(isset($node['expr_type']) && ($node['expr_type'] === 'function' || $node['expr_type'] === 'aggregate_function')) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function isExpression($node) {
+	if(isset($node['expr_type']) && $node['expr_type'] === 'expression') {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function implodeNoQuotes($node) {
+	if(array_key_exists("delim", $node)) {
+		if($node['delim'] !== false) {
+			return implode($node['delim'], $node['parts']);
+		} else {
+			return implode("", $node['parts']);
+		}
+	} else {
+		return implode(".", $node['parts']);
+	}
+
+}
+
+function rewriteTableNameInSubqueries(&$subTree, $toThisTableName, $exceptThisTableName) {
+	foreach($subTree as &$node) {
+		if(hasSubtree($node)) {
+			rewriteTableNameInSubqueries($node['sub_tree'], $toThisTableName, $exceptThisTableName);
+		}
+
+		if(isColref($node)) {
+			$currTable = extractTableName($node);
+
+			if($currTable !== $exceptThisTableName) {
+				$node['no_quotes']['parts'] = array($toThisTableName, implodeNoQuotes($node['no_quotes']));
+				$node['base_expr'] = getBaseExpr($node);
+			}
+		}
 	}
 }
 
