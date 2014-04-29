@@ -115,6 +115,14 @@ echo runTest("SELECT 2.0 + b.bdmId, b.snapnum / r.zred, r.zred, b.x,b.y,b.z,b.ph
 echo "Test 36\n";
 echo runTest("SELECT 2.0 + b.bdmId, b.snapnum / r.zred, r.zred, b.x,b.y,b.z,b.phkey, hilbertKey(10,1000.0,3,b.x,b.y,b.z) as xyzphkey FROM MDPL.BDMW b, MDPL.Redshifts r WHERE b.snapnum=88 AND b.snapnum = r.snapnum AND b.Mvir > 1.e14 ORDER BY 8 LIMIT 10", "test36.ref");
 
+//Test37
+echo "Test 37\n";
+echo runTest("select host.*, sub.*, `host`.bdmId  AS `host__bdmId`, `host`.Mvir  AS `host__Mvir`, `sub`.snapnum  AS `sub__snapnum`, `sub`.hostFlag  AS `sub__hostFlag`, `sub`.Mvir  AS `sub__Mvir` from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88", "test37.ref");
+
+//Test38
+echo "Test 38\n";
+echo runTest("SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfId_DM FROM Clues3_LGGas.AHFMatch as m, Clues3_LGGas.AHF as gas, Clues3_LGDM.AHF as dm WHERE m.ahfId_Gas = gas.ahfId AND m.ahfId_DM = dm.ahfId ORDER BY gas.Mvir DESC LIMIT 10", "test38.ref");
+
 
 
 ?>

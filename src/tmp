@@ -53831,3 +53831,539 @@ CALL paquDropTmp('aggregation_tmp_78246355');
 USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `prog__fofTreeId`,`prog__fofId`,`prog__treeSnapnum`,`prog__descendantId`,`prog__lastProgId`,`prog__mainLeafId`,`prog__treeRootId`,`prog__x`,`prog__y`,`prog__z`,`prog__vx`,`prog__vy`,`prog__vz`,`prog__np`,`prog__mass`,`prog__size`,`prog__spin`,`prog__ix`,`prog__iy`,`prog__iz`,`prog__phkey`
 FROM `aggregation_tmp_93666276`  ORDER BY `prog__fofTreeId` ASC ;
 CALL paquDropTmp('aggregation_tmp_93666276');
+This is the query plan optimisation output for the query:
+select host.*, sub.* from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+-- INPUT SQL:
+Array
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`sub.*`,`sub.hostFlag`,`sub.Mvir`,`sub.snapnum`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`sub.*`=VALUES(`sub.*`),
+`sub.hostFlag`=VALUES(`sub.hostFlag`),
+`sub.Mvir`=VALUES(`sub.Mvir`),
+`sub.snapnum`=VALUES(`sub.snapnum`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `sub`.* AS `sub.*`,`sub`.`hostFlag` AS `sub.hostFlag`,`sub`.`Mvir` AS `sub.Mvir`,`sub`.`snapnum` AS `sub.snapnum`
+FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `sub.*`,`sub.hostFlag`,`sub.Mvir`,`sub.snapnum`
+FROM `aggregation_tmp_59579927`   
+ON DUPLICATE KEY UPDATE
+`sub.*`=VALUES(`sub.*`),
+`sub.hostFlag`=VALUES(`sub.hostFlag`),
+`sub.Mvir`=VALUES(`sub.Mvir`),
+`sub.snapnum`=VALUES(`sub.snapnum`)
+-- INPUT SQL:
+select host.*, sub.* from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`host.*`,`sub.*`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`host.*`=VALUES(`host.*`),
+`sub.*`=VALUES(`sub.*`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `host`.* AS `host.*`,`sub`.`sub.*` AS `sub.*`
+FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub.hostFlag`,`sub.Mvir`,`sub.snapnum`
+FROM `aggregation_tmp_59579927`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub.hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub.Mvir` )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `host.*`,`sub.*`
+FROM `aggregation_tmp_45474441`   
+ON DUPLICATE KEY UPDATE
+`host.*`=VALUES(`host.*`),
+`sub.*`=VALUES(`sub.*`)
+This is the query plan for the query:
+select host.*, sub.* from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+CALL paquExec('SELECT `sub`.* AS `sub.*`,`sub`.`hostFlag` AS `sub.hostFlag`,`sub`.`Mvir` AS `sub.Mvir`,`sub`.`snapnum` AS `sub.snapnum` FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   ', 'aggregation_tmp_59579927');
+CALL paquExec('SELECT `host`.* AS `host.*`,`sub`.`sub.*` AS `sub.*` FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub.hostFlag`,`sub.Mvir`,`sub.snapnum` FROM `aggregation_tmp_59579927`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub.hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub.Mvir` )   ', 'aggregation_tmp_45474441');
+CALL paquDropTmp('aggregation_tmp_59579927');
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `host.*`,`sub.*`
+FROM `aggregation_tmp_45474441`   ;
+CALL paquDropTmp('aggregation_tmp_45474441');
+This is the query plan optimisation output for the query:
+select host.*, sub.* from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+-- INPUT SQL:
+Array
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`sub.*`,`sub.hostFlag`,`sub.Mvir`,`sub.snapnum`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`sub.*`=VALUES(`sub.*`),
+`sub.hostFlag`=VALUES(`sub.hostFlag`),
+`sub.Mvir`=VALUES(`sub.Mvir`),
+`sub.snapnum`=VALUES(`sub.snapnum`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `sub`.* AS `sub.*`,`sub`.`hostFlag` AS `sub.hostFlag`,`sub`.`Mvir` AS `sub.Mvir`,`sub`.`snapnum` AS `sub.snapnum`
+FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `sub.*`,`sub.hostFlag`,`sub.Mvir`,`sub.snapnum`
+FROM `aggregation_tmp_42809631`   
+ON DUPLICATE KEY UPDATE
+`sub.*`=VALUES(`sub.*`),
+`sub.hostFlag`=VALUES(`sub.hostFlag`),
+`sub.Mvir`=VALUES(`sub.Mvir`),
+`sub.snapnum`=VALUES(`sub.snapnum`)
+-- INPUT SQL:
+select host.*, sub.* from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`host.*`,`sub.*`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`host.*`=VALUES(`host.*`),
+`sub.*`=VALUES(`sub.*`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `host`.* AS `host.*`,`sub`.`sub.*` AS `sub.*`
+FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub.hostFlag`,`sub.Mvir`,`sub.snapnum`
+FROM `aggregation_tmp_42809631`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub.hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub.Mvir` )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `host.*`,`sub.*`
+FROM `aggregation_tmp_81220672`   
+ON DUPLICATE KEY UPDATE
+`host.*`=VALUES(`host.*`),
+`sub.*`=VALUES(`sub.*`)
+This is the query plan for the query:
+select host.*, sub.* from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+CALL paquExec('SELECT `sub`.* AS `sub.*`,`sub`.`hostFlag` AS `sub.hostFlag`,`sub`.`Mvir` AS `sub.Mvir`,`sub`.`snapnum` AS `sub.snapnum` FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   ', 'aggregation_tmp_42809631');
+CALL paquExec('SELECT `host`.* AS `host.*`,`sub`.`sub.*` AS `sub.*` FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub.hostFlag`,`sub.Mvir`,`sub.snapnum` FROM `aggregation_tmp_42809631`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub.hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub.Mvir` )   ', 'aggregation_tmp_81220672');
+CALL paquDropTmp('aggregation_tmp_42809631');
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `host.*`,`sub.*`
+FROM `aggregation_tmp_81220672`   ;
+CALL paquDropTmp('aggregation_tmp_81220672');
+This is the query plan optimisation output for the query:
+select host.*, sub.*, `host`.bdmId  AS `host__bdmId`, `host`.Mvir  AS `host__Mvir`, `sub`.snapnum  AS `sub__snapnum`, `sub`.hostFlag  AS `sub__hostFlag`, `sub`.Mvir  AS `sub__Mvir` from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+-- INPUT SQL:
+Array
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`sub.*`=VALUES(`sub.*`),
+`sub__snapnum`=VALUES(`sub__snapnum`),
+`sub__hostFlag`=VALUES(`sub__hostFlag`),
+`sub__Mvir`=VALUES(`sub__Mvir`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `sub`.* AS `sub.*`,`sub`.`snapnum` AS `sub__snapnum`,`sub`.`hostFlag` AS `sub__hostFlag`,`sub`.`Mvir` AS `sub__Mvir`
+FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+FROM `aggregation_tmp_68369701`   
+ON DUPLICATE KEY UPDATE
+`sub.*`=VALUES(`sub.*`),
+`sub__snapnum`=VALUES(`sub__snapnum`),
+`sub__hostFlag`=VALUES(`sub__hostFlag`),
+`sub__Mvir`=VALUES(`sub__Mvir`)
+-- INPUT SQL:
+select host.*, sub.*, `host`.bdmId  AS `host__bdmId`, `host`.Mvir  AS `host__Mvir`, `sub`.snapnum  AS `sub__snapnum`, `sub`.hostFlag  AS `sub__hostFlag`, `sub`.Mvir  AS `sub__Mvir` from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`host.*`,`host__bdmId`,`host__Mvir`,`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`host.*`=VALUES(`host.*`),
+`host__bdmId`=VALUES(`host__bdmId`),
+`host__Mvir`=VALUES(`host__Mvir`),
+`sub.*`=VALUES(`sub.*`),
+`sub__snapnum`=VALUES(`sub__snapnum`),
+`sub__hostFlag`=VALUES(`sub__hostFlag`),
+`sub__Mvir`=VALUES(`sub__Mvir`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `host`.* AS `host.*`,`host`.`bdmId` AS `host__bdmId`,`host`.`Mvir` AS `host__Mvir`,`sub`.`sub.*` AS `sub.*`,`sub`.`sub__snapnum` AS `sub__snapnum`,`sub`.`sub__hostFlag` AS `sub__hostFlag`,`sub`.`sub__Mvir` AS `sub__Mvir`
+FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+FROM `aggregation_tmp_68369701`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub__hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub__Mvir` )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `host.*`,`host__bdmId`,`host__Mvir`,`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+FROM `aggregation_tmp_708785`   
+ON DUPLICATE KEY UPDATE
+`host.*`=VALUES(`host.*`),
+`host__bdmId`=VALUES(`host__bdmId`),
+`host__Mvir`=VALUES(`host__Mvir`),
+`sub.*`=VALUES(`sub.*`),
+`sub__snapnum`=VALUES(`sub__snapnum`),
+`sub__hostFlag`=VALUES(`sub__hostFlag`),
+`sub__Mvir`=VALUES(`sub__Mvir`)
+This is the query plan for the query:
+select host.*, sub.*, `host`.bdmId  AS `host__bdmId`, `host`.Mvir  AS `host__Mvir`, `sub`.snapnum  AS `sub__snapnum`, `sub`.hostFlag  AS `sub__hostFlag`, `sub`.Mvir  AS `sub__Mvir` from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+CALL paquExec('SELECT `sub`.* AS `sub.*`,`sub`.`snapnum` AS `sub__snapnum`,`sub`.`hostFlag` AS `sub__hostFlag`,`sub`.`Mvir` AS `sub__Mvir` FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   ', 'aggregation_tmp_68369701');
+CALL paquExec('SELECT `host`.* AS `host.*`,`host`.`bdmId` AS `host__bdmId`,`host`.`Mvir` AS `host__Mvir`,`sub`.`sub.*` AS `sub.*`,`sub`.`sub__snapnum` AS `sub__snapnum`,`sub`.`sub__hostFlag` AS `sub__hostFlag`,`sub`.`sub__Mvir` AS `sub__Mvir` FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir` FROM `aggregation_tmp_68369701`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub__hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub__Mvir` )   ', 'aggregation_tmp_708785');
+CALL paquDropTmp('aggregation_tmp_68369701');
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `host.*`,`host__bdmId`,`host__Mvir`,`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+FROM `aggregation_tmp_708785`   ;
+CALL paquDropTmp('aggregation_tmp_708785');
+This is the query plan optimisation output for the query:
+select host.*, sub.*, `host`.bdmId  AS `host__bdmId`, `host`.Mvir  AS `host__Mvir`, `sub`.snapnum  AS `sub__snapnum`, `sub`.hostFlag  AS `sub__hostFlag`, `sub`.Mvir  AS `sub__Mvir` from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+-- INPUT SQL:
+Array
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`sub.*`=VALUES(`sub.*`),
+`sub__snapnum`=VALUES(`sub__snapnum`),
+`sub__hostFlag`=VALUES(`sub__hostFlag`),
+`sub__Mvir`=VALUES(`sub__Mvir`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `sub`.* AS `sub.*`,`sub`.`snapnum` AS `sub__snapnum`,`sub`.`hostFlag` AS `sub__hostFlag`,`sub`.`Mvir` AS `sub__Mvir`
+FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+FROM `aggregation_tmp_81546201`   
+ON DUPLICATE KEY UPDATE
+`sub.*`=VALUES(`sub.*`),
+`sub__snapnum`=VALUES(`sub__snapnum`),
+`sub__hostFlag`=VALUES(`sub__hostFlag`),
+`sub__Mvir`=VALUES(`sub__Mvir`)
+-- INPUT SQL:
+select host.*, sub.*, `host`.bdmId  AS `host__bdmId`, `host`.Mvir  AS `host__Mvir`, `sub`.snapnum  AS `sub__snapnum`, `sub`.hostFlag  AS `sub__hostFlag`, `sub`.Mvir  AS `sub__Mvir` from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`host.*`,`host__bdmId`,`host__Mvir`,`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`host.*`=VALUES(`host.*`),
+`host__bdmId`=VALUES(`host__bdmId`),
+`host__Mvir`=VALUES(`host__Mvir`),
+`sub.*`=VALUES(`sub.*`),
+`sub__snapnum`=VALUES(`sub__snapnum`),
+`sub__hostFlag`=VALUES(`sub__hostFlag`),
+`sub__Mvir`=VALUES(`sub__Mvir`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `host`.* AS `host.*`,`host`.`bdmId` AS `host__bdmId`,`host`.`Mvir` AS `host__Mvir`,`sub`.`sub.*` AS `sub.*`,`sub`.`sub__snapnum` AS `sub__snapnum`,`sub`.`sub__hostFlag` AS `sub__hostFlag`,`sub`.`sub__Mvir` AS `sub__Mvir`
+FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+FROM `aggregation_tmp_81546201`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub__hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub__Mvir` )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `host.*`,`host__bdmId`,`host__Mvir`,`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+FROM `aggregation_tmp_32360823`   
+ON DUPLICATE KEY UPDATE
+`host.*`=VALUES(`host.*`),
+`host__bdmId`=VALUES(`host__bdmId`),
+`host__Mvir`=VALUES(`host__Mvir`),
+`sub.*`=VALUES(`sub.*`),
+`sub__snapnum`=VALUES(`sub__snapnum`),
+`sub__hostFlag`=VALUES(`sub__hostFlag`),
+`sub__Mvir`=VALUES(`sub__Mvir`)
+This is the query plan for the query:
+select host.*, sub.*, `host`.bdmId  AS `host__bdmId`, `host`.Mvir  AS `host__Mvir`, `sub`.snapnum  AS `sub__snapnum`, `sub`.hostFlag  AS `sub__hostFlag`, `sub`.Mvir  AS `sub__Mvir` from MDPL.BDMW host, MDPL.BDMW sub where host.bdmId = sub.hostFlag and host.Mvir < sub.Mvir and host.snapnum=88 and sub.snapnum=88
+
+CALL paquExec('SELECT `sub`.* AS `sub.*`,`sub`.`snapnum` AS `sub__snapnum`,`sub`.`hostFlag` AS `sub__hostFlag`,`sub`.`Mvir` AS `sub__Mvir` FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   ', 'aggregation_tmp_81546201');
+CALL paquExec('SELECT `host`.* AS `host.*`,`host`.`bdmId` AS `host__bdmId`,`host`.`Mvir` AS `host__Mvir`,`sub`.`sub.*` AS `sub.*`,`sub`.`sub__snapnum` AS `sub__snapnum`,`sub`.`sub__hostFlag` AS `sub__hostFlag`,`sub`.`sub__Mvir` AS `sub__Mvir` FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir` FROM `aggregation_tmp_81546201`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub__hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub__Mvir` )   ', 'aggregation_tmp_32360823');
+CALL paquDropTmp('aggregation_tmp_81546201');
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `host.*`,`host__bdmId`,`host__Mvir`,`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir`
+FROM `aggregation_tmp_32360823`   ;
+CALL paquDropTmp('aggregation_tmp_32360823');
+This is the query plan optimisation output for the query:
+SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfId_DM FROM Clues3_LGGas.AHFMatch as m, Clues3_LGGas.AHF as gas, Clues3_LGDM.AHF as dm WHERE m.ahfId_Gas = gas.ahfId AND m.ahfId_DM = dm.ahfId ORDER BY gas.Mvir DESC LIMIT 10
+
+-- INPUT SQL:
+Array
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`m.ahfId_Gas`,`m.ahfId_DM`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `m`.`ahfId_Gas` AS `m.ahfId_Gas`,`m`.`ahfId_DM` AS `m.ahfId_DM`
+FROM Clues3_LGGas.AHFMatch AS `m` 
+)
+
+
+-- AGGREGATION SQL:
+SELECT `m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_65987025`   
+ON DUPLICATE KEY UPDATE
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+-- INPUT SQL:
+Array
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`gas.ahfId`=VALUES(`gas.ahfId`),
+`gas.Mvir`=VALUES(`gas.Mvir`),
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `gas`.`ahfId` AS `gas.ahfId`,`gas`.`Mvir` AS `gas.Mvir`,`m`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`m`.`m.ahfId_DM` AS `m.ahfId_DM`
+FROM Clues3_LGGas.AHF AS `gas` JOIN ( SELECT `m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_65987025`   ) AS `m`  WHERE ( `m`.`m.ahfId_Gas` = `gas`.`ahfId` )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_86359429`  ORDER BY `gas.Mvir` DESC 
+ON DUPLICATE KEY UPDATE
+`gas.ahfId`=VALUES(`gas.ahfId`),
+`gas.Mvir`=VALUES(`gas.Mvir`),
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+-- INPUT SQL:
+SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfId_DM FROM Clues3_LGGas.AHFMatch as m, Clues3_LGGas.AHF as gas, Clues3_LGDM.AHF as dm WHERE m.ahfId_Gas = gas.ahfId AND m.ahfId_DM = dm.ahfId ORDER BY gas.Mvir DESC LIMIT 10
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`dm.ahfId`,`dm.Mvir`,`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`dm.ahfId`=VALUES(`dm.ahfId`),
+`dm.Mvir`=VALUES(`dm.Mvir`),
+`gas.ahfId`=VALUES(`gas.ahfId`),
+`gas.Mvir`=VALUES(`gas.Mvir`),
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `dm`.`ahfId` AS `dm.ahfId`,`dm`.`Mvir` AS `dm.Mvir`,`gas`.`gas.ahfId` AS `gas.ahfId`,`gas`.`gas.Mvir` AS `gas.Mvir`,`gas`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`gas`.`m.ahfId_DM` AS `m.ahfId_DM`
+FROM Clues3_LGDM.AHF AS `dm` JOIN ( SELECT `gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_86359429`  ORDER BY `gas.Mvir` DESC ) AS `gas`  WHERE ( `gas`.`m.ahfId_DM` = `dm`.`ahfId` )  ORDER BY `gas`.`Mvir` DESC  LIMIT 0,10
+)
+
+
+-- AGGREGATION SQL:
+SELECT `dm.ahfId`,`dm.Mvir`,`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_62270890`  ORDER BY `gas.Mvir` DESC  LIMIT 0,10
+ON DUPLICATE KEY UPDATE
+`dm.ahfId`=VALUES(`dm.ahfId`),
+`dm.Mvir`=VALUES(`dm.Mvir`),
+`gas.ahfId`=VALUES(`gas.ahfId`),
+`gas.Mvir`=VALUES(`gas.Mvir`),
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+This is the query plan for the query:
+SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfId_DM FROM Clues3_LGGas.AHFMatch as m, Clues3_LGGas.AHF as gas, Clues3_LGDM.AHF as dm WHERE m.ahfId_Gas = gas.ahfId AND m.ahfId_DM = dm.ahfId ORDER BY gas.Mvir DESC LIMIT 10
+
+CALL paquExec('SELECT `m`.`ahfId_Gas` AS `m.ahfId_Gas`,`m`.`ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGGas.AHFMatch AS `m` ', 'aggregation_tmp_65987025');
+CALL paquExec('SELECT `gas`.`ahfId` AS `gas.ahfId`,`gas`.`Mvir` AS `gas.Mvir`,`m`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`m`.`m.ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGGas.AHF AS `gas` JOIN ( SELECT `m.ahfId_Gas`,`m.ahfId_DM` FROM `aggregation_tmp_65987025`   ) AS `m`  WHERE ( `m`.`m.ahfId_Gas` = `gas`.`ahfId` )   ', 'aggregation_tmp_86359429');
+CALL paquExec('SELECT `dm`.`ahfId` AS `dm.ahfId`,`dm`.`Mvir` AS `dm.Mvir`,`gas`.`gas.ahfId` AS `gas.ahfId`,`gas`.`gas.Mvir` AS `gas.Mvir`,`gas`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`gas`.`m.ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGDM.AHF AS `dm` JOIN ( SELECT `gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM` FROM `aggregation_tmp_86359429`  ORDER BY `gas.Mvir` DESC ) AS `gas`  WHERE ( `gas`.`m.ahfId_DM` = `dm`.`ahfId` )  ORDER BY `gas`.`Mvir` DESC  LIMIT 0,10', 'aggregation_tmp_62270890');
+CALL paquDropTmp('aggregation_tmp_65987025');
+CALL paquDropTmp('aggregation_tmp_86359429');
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `dm.ahfId`,`dm.Mvir`,`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_62270890`  ORDER BY `gas.Mvir` DESC  LIMIT 0,10;
+CALL paquDropTmp('aggregation_tmp_62270890');
+This is the query plan optimisation output for the query:
+SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfId_DM FROM Clues3_LGGas.AHFMatch as m, Clues3_LGGas.AHF as gas, Clues3_LGDM.AHF as dm WHERE m.ahfId_Gas = gas.ahfId AND m.ahfId_DM = dm.ahfId ORDER BY gas.Mvir DESC LIMIT 10
+
+-- INPUT SQL:
+Array
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`m.ahfId_Gas`,`m.ahfId_DM`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `m`.`ahfId_Gas` AS `m.ahfId_Gas`,`m`.`ahfId_DM` AS `m.ahfId_DM`
+FROM Clues3_LGGas.AHFMatch AS `m` 
+)
+
+
+-- AGGREGATION SQL:
+SELECT `m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_45770318`   
+ON DUPLICATE KEY UPDATE
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+-- INPUT SQL:
+Array
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`gas.ahfId`=VALUES(`gas.ahfId`),
+`gas.Mvir`=VALUES(`gas.Mvir`),
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `gas`.`ahfId` AS `gas.ahfId`,`gas`.`Mvir` AS `gas.Mvir`,`m`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`m`.`m.ahfId_DM` AS `m.ahfId_DM`
+FROM Clues3_LGGas.AHF AS `gas` JOIN ( SELECT `m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_45770318`   ) AS `m`  WHERE ( `m`.`m.ahfId_Gas` = `gas`.`ahfId` )   
+)
+
+
+-- AGGREGATION SQL:
+SELECT `gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_73258946`  ORDER BY `gas.Mvir` DESC 
+ON DUPLICATE KEY UPDATE
+`gas.ahfId`=VALUES(`gas.ahfId`),
+`gas.Mvir`=VALUES(`gas.Mvir`),
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+-- INPUT SQL:
+SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfId_DM FROM Clues3_LGGas.AHFMatch as m, Clues3_LGGas.AHF as gas, Clues3_LGDM.AHF as dm WHERE m.ahfId_Gas = gas.ahfId AND m.ahfId_DM = dm.ahfId ORDER BY gas.Mvir DESC LIMIT 10
+
+--PARALLEL OPTIMIZATIONS:
+
+* The following projections were selected for a UNIQUE CHECK on the storage node operation:
+`dm.ahfId`,`dm.Mvir`,`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+
+* storage node result set merge optimization enabled:
+ON DUPLICATE KEY UPDATE
+`dm.ahfId`=VALUES(`dm.ahfId`),
+`dm.Mvir`=VALUES(`dm.Mvir`),
+`gas.ahfId`=VALUES(`gas.ahfId`),
+`gas.Mvir`=VALUES(`gas.Mvir`),
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+
+
+-- SQL TO SEND TO SHARDS:
+Array
+(
+    [0] => SELECT `dm`.`ahfId` AS `dm.ahfId`,`dm`.`Mvir` AS `dm.Mvir`,`gas`.`gas.ahfId` AS `gas.ahfId`,`gas`.`gas.Mvir` AS `gas.Mvir`,`gas`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`gas`.`m.ahfId_DM` AS `m.ahfId_DM`
+FROM Clues3_LGDM.AHF AS `dm` JOIN ( SELECT `gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_73258946`  ORDER BY `gas.Mvir` DESC ) AS `gas`  WHERE ( `gas`.`m.ahfId_DM` = `dm`.`ahfId` )  ORDER BY `gas`.`Mvir` DESC  LIMIT 0,10
+)
+
+
+-- AGGREGATION SQL:
+SELECT `dm.ahfId`,`dm.Mvir`,`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_95674943`  ORDER BY `gas.Mvir` DESC  LIMIT 0,10
+ON DUPLICATE KEY UPDATE
+`dm.ahfId`=VALUES(`dm.ahfId`),
+`dm.Mvir`=VALUES(`dm.Mvir`),
+`gas.ahfId`=VALUES(`gas.ahfId`),
+`gas.Mvir`=VALUES(`gas.Mvir`),
+`m.ahfId_Gas`=VALUES(`m.ahfId_Gas`),
+`m.ahfId_DM`=VALUES(`m.ahfId_DM`)
+This is the query plan for the query:
+SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfId_DM FROM Clues3_LGGas.AHFMatch as m, Clues3_LGGas.AHF as gas, Clues3_LGDM.AHF as dm WHERE m.ahfId_Gas = gas.ahfId AND m.ahfId_DM = dm.ahfId ORDER BY gas.Mvir DESC LIMIT 10
+
+CALL paquExec('SELECT `m`.`ahfId_Gas` AS `m.ahfId_Gas`,`m`.`ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGGas.AHFMatch AS `m` ', 'aggregation_tmp_45770318');
+CALL paquExec('SELECT `gas`.`ahfId` AS `gas.ahfId`,`gas`.`Mvir` AS `gas.Mvir`,`m`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`m`.`m.ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGGas.AHF AS `gas` JOIN ( SELECT `m.ahfId_Gas`,`m.ahfId_DM` FROM `aggregation_tmp_45770318`   ) AS `m`  WHERE ( `m`.`m.ahfId_Gas` = `gas`.`ahfId` )   ', 'aggregation_tmp_73258946');
+CALL paquExec('SELECT `dm`.`ahfId` AS `dm.ahfId`,`dm`.`Mvir` AS `dm.Mvir`,`gas`.`gas.ahfId` AS `gas.ahfId`,`gas`.`gas.Mvir` AS `gas.Mvir`,`gas`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`gas`.`m.ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGDM.AHF AS `dm` JOIN ( SELECT `gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM` FROM `aggregation_tmp_73258946`  ORDER BY `gas.Mvir` DESC ) AS `gas`  WHERE ( `gas`.`m.ahfId_DM` = `dm`.`ahfId` )  ORDER BY `gas`.`Mvir` DESC  LIMIT 0,10', 'aggregation_tmp_95674943');
+CALL paquDropTmp('aggregation_tmp_45770318');
+CALL paquDropTmp('aggregation_tmp_73258946');
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `dm.ahfId`,`dm.Mvir`,`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM`
+FROM `aggregation_tmp_95674943`  ORDER BY `gas.Mvir` DESC  LIMIT 0,10;
+CALL paquDropTmp('aggregation_tmp_95674943');
