@@ -29,7 +29,9 @@
 
 	error_reporting(E_ALL);
 
-	require_once 'php-sql-parser/src/PHPSQLParser.php';
+if(!class_exists("PHPSQLParser"))
+	require_once 'php-sql-parser/src/PHPSQLParser/PHPSQLParser.php';
+
 	require_once 'paquUtils.php';
 
 /**
@@ -1060,7 +1062,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 			$find = false;
 			foreach ($toThisNode['SELECT'] as $selNode) {
 				if (columnIsEqual($selNode['base_expr'], $node['base_expr']) || ( hasAlias($selNode) &&
-							 $selNode['alias']['name'] == $node['base_expr'] ) ) {
+							 trim($selNode['alias']['name'], "`") == trim($node['base_expr'], "`") ) ) {
 
 					$find = true;
 					break;
@@ -1081,7 +1083,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 				$node['alias'] = false;
 				foreach($columnArray as $column) {
 					if(columnIsEqual($column, $node['origParse']) || ( hasAlias($column) &&
-							$column['alias']['name'] === $node['origParse']['base_expr'] )
+							trim($column['alias']['name'], "`") === trim($node['origParse']['base_expr'], "`") )
 						 || strpos($column['base_expr'], "*") !== false) {
 						//found!
 						//compare with currently processed table
@@ -1113,7 +1115,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 			$findNode = false;
 			foreach ($toThisNode['SELECT'] as $selNode) {
 				if (columnIsEqual($selNode, $node) || ( hasAlias($selNode) &&
-						$selNode['alias']['name'] == $node['base_expr']) ) {
+						trim($selNode['alias']['name'], "`") == trim($node['base_expr'], "`")) ) {
 					$findNode = $selNode; 
 					break;
 				}
@@ -1128,9 +1130,15 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 				$newNode = array();
 				$newNode['expr_type'] = "colref";
 				$newNode['base_expr'] = getBaseExpr($node['origParse']);
-				$newNode['alias'] = createAliasNode(array(implodeNoQuotes($node['origParse']['no_quotes'])));
+
+				if(isColref($node['origParse'])) {
+					$newNode['alias'] = createAliasNode(array(implodeNoQuotes($node['origParse']['no_quotes'])));
+					$newNode['no_quotes'] = $node['origParse']['no_quotes'];
+				} else {
+					$newNode['alias'] = createAliasNode(array(buildEscapedString(array($node['origParse']))));
+				}
+				
 				$newNode['order_clause'] = $node;
-				$newNode['no_quotes'] = $node['origParse']['no_quotes'];
 				$newNode['sub_tree'] = false;
 				if(!empty($node['origParse']['alias'])) {
 					$newNode['alias'] = $node['origParse']['alias'];
@@ -1199,7 +1207,7 @@ function PHPSQLaddOuterQueryGroup(&$sqlTree, &$table, &$toThisNode, &$tableList,
 			$findNode = false;
 			foreach ($toThisNode['SELECT'] as &$selNode) {
 				if (columnIsEqual($selNode, $node) || ( hasAlias($selNode) &&
-						$selNode['alias']['name'] == $node['base_expr'] ) ) {
+						trim($selNode['alias']['name'], "`") == trim($node['base_expr'], "`") ) ) {
 					$findNode = $selNode;
 					break;
 				}
@@ -1453,7 +1461,14 @@ function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList,
 	PHPSQLcollectColumns($sqlTree, $tblDb, $tblName, trim($tblAlias, '`'), $partList, $tableList, $recLevel);
 
 	foreach ($partList as $node) {
-		array_push($toThisNode['SELECT'], $node);
+		$nodeCopy = $node;
+		$nodeCopy['base_expr'] = getBaseExpr($nodeCopy);
+		
+		if(!hasAlias($nodeCopy) && isColref($nodeCopy) && $nodeCopy['base_expr'] !== "*") {
+			$nodeCopy['alias'] = createAliasNode(array(implodeNoQuotes($nodeCopy['no_quotes'])));
+		}
+		
+		array_push($toThisNode['SELECT'], $nodeCopy);
 		$key = array_search($node, $sqlTree['SELECT']);
 		unset($sqlTree['SELECT'][$key]);
 	}
@@ -1503,6 +1518,12 @@ function PHPSQLaddOuterQuerySelect(&$sqlTree, &$table, &$toThisNode, $tableList,
 		if ($find === false) {
 			#mark this select as comming from a where
 			$cols['where_col'] = true;
+
+			$cols['base_expr'] = getBaseExpr($cols);
+			
+			if(!hasAlias($cols) && isColref($cols) && $cols['base_expr'] !== "*") {
+				$cols['alias'] = createAliasNode(array(implodeNoQuotes($cols['no_quotes'])));
+			}
 
 			array_push($toThisNode['SELECT'], $cols);
 		}

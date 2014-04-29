@@ -30,9 +30,12 @@
 
 /* This script requires PEAR Net_Gearman */
 /* It also requires Console_Getopt, but this should be installed by default with pear */
-require_once 'php-sql-parser/src/PHPSQLParser.php';
+if(!class_exists("PHPSQLParser"))
+	require_once 'php-sql-parser/src/PHPSQLParser/PHPSQLParser.php';
+
 require_once 'parOptimImplicitJoin.php';
 require_once 'paquUtils.php';
+
 #$params = get_commandline();
 #FIXME: This should not extend MySQLDAl, but should create a new DL object
 #DL needs additions such as creating table, check existence of table, etc.
@@ -744,7 +747,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 	if (!is_array($sql)) {
 	    #TODO: support parser re-use	
 	    #$this->parsed = $this->client->do('sql_parse',$sql);
-	    $parser = new PHPSQLParser($sql);
+	    $parser = new \PHPSQLParser\PHPSQLParser($sql);
 
 	    $this->parsed = PHPSQLbuildShardQuery($parser->parsed, $this->headNodeTables);
 	    $this->parsedCopy = $this->parsed;

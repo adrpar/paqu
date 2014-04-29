@@ -29,11 +29,6 @@
 
 error_reporting(E_ALL);
 
-if(!class_exists("PHPSQLParser"))
-	require_once 'php-sql-parser2.php';
-if(!class_exists("PHPSQLCreator"))
-	require_once 'php-sql-creator2.php';
-
 /**
  * @file parseSqlAll.php
  * @brief Parser that transforms SQL * attributes into full list of 
@@ -68,7 +63,7 @@ function parseSqlAll($sql, $mysqlConn = false, $zendAdapter = false) {
     $newSqlTree = processQueryWildcard($sqlTree->parsed, $mysqlConn, $zendAdapter);
 
     try {
-		$newSql = new PHPSQLCreator($newSqlTree);
+		$newSql = new \PHPSQLParser\PHPSQLCreator($newSqlTree);
     } catch (UnableToCreateSQLException $err) {
 		return $sql;
     }
@@ -79,10 +74,7 @@ function parseSqlAll($sql, $mysqlConn = false, $zendAdapter = false) {
 function envokeParseSqlAllParser($sql) {
 	//it could be, that we are using the newest version of the SQL parser that is included
 	//somewhere else already... If not, use the one we provide
-	if(!class_exists("PHPSQLParser"))
-    	$sqlTree = new PHPSQLParser2($sql);
-    else
-    	$sqlTree = new PHPSQLParser($sql);
+	$sqlTree = new \PHPSQLParser\PHPSQLParser($sql);
 
     return $sqlTree;
 }

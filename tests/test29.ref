@@ -1,5 +1,5 @@
-CALL paquExec('SELECT descend.fofTreeId AS `descend.fofTreeId`,descend.lastProgId AS `descend.lastProgId` FROM MDR1.FOFMtree AS `descend` WHERE ( `descend`.`fofTreeId` = 85000000000 )   ', 'aggregation_tmp_31711078')
-CALL paquExec('SELECT prog.fofTreeId AS `prog.fofTreeId` FROM MDR1.FOFMtree AS `prog` JOIN ( SELECT `descend.fofTreeId`,`descend.lastProgId` FROM `aggregation_tmp_31711078`   ) AS `descend`  WHERE ( `prog`.`fofTreeId` BETWEEN `descend`.`descend.fofTreeId` AND `descend`.`descend.lastProgId` )   ', 'aggregation_tmp_22130573')
+CALL paquExec('SELECT `descend`.`fofTreeId` AS `descend.fofTreeId`,`descend`.`lastProgId` AS `descend.lastProgId` FROM MDR1.FOFMtree AS `descend` WHERE ( `descend`.`fofTreeId` = 85000000000 )   ', 'aggregation_tmp_31711078')
+CALL paquExec('SELECT `prog`.`fofTreeId` AS `prog.fofTreeId` FROM MDR1.FOFMtree AS `prog` JOIN ( SELECT `descend.fofTreeId`,`descend.lastProgId` FROM `aggregation_tmp_31711078`   ) AS `descend`  WHERE ( `prog`.`fofTreeId` BETWEEN `descend`.`descend.fofTreeId` AND `descend`.`descend.lastProgId` )   ', 'aggregation_tmp_22130573')
 CALL paquDropTmp('aggregation_tmp_31711078')
 USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `prog.fofTreeId` FROM `aggregation_tmp_22130573`  ORDER BY `prog.fofTreeId` ASC 
 CALL paquDropTmp('aggregation_tmp_22130573')

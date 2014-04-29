@@ -1,3 +1,3 @@
-CALL paquExec('SELECT x AS `x` FROM table WHERE ( `x` = 0.998373 ) or ( ( ( `y` = sin( 0.998373 ) ) and ( `z` = 0.998373 ) ) and ( `z` = 43 ) ) or ( ( ( `z` = 23 ) and ( `z` = 4 ) ) or ( `x` = 1 ) ) or ( ( `y` = 34 ) and ( `x` between 1 and 2 ) )  ', 'aggregation_tmp_53288668')
+CALL paquExec('SELECT `x` AS `x` FROM table WHERE ( `x` = 0.998373 ) or ( ( ( `y` = sin( 0.998373 ) ) and ( `z` = 0.998373 ) ) and ( `z` = 43 ) ) or ( ( ( `z` = 23 ) and ( `z` = 4 ) ) or ( `x` = 1 ) ) or ( ( `y` = 34 ) and ( `x` between 1 and 2 ) )  ', 'aggregation_tmp_53288668')
 USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `x` FROM `aggregation_tmp_53288668`   
 CALL paquDropTmp('aggregation_tmp_53288668')

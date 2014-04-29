@@ -151,6 +151,12 @@ function getBaseExpr($node) {
 			$return = $tmp[0];
 		}
 
+		//aggregate base_expr just consist of the function name in upper case
+		if($node['expr_type'] === "aggregate_function") {
+			$return = strtoupper($return);
+			return $return;
+		}
+
 		$return .= "( ";
 	} else if ($node['expr_type'] === "bracket_expression") {
 		$return .= "( ";
@@ -190,7 +196,11 @@ function getBaseExpr($node) {
 				$return .= $node['no_quotes']['delim'];
 			}
 
-			$return .= "`" . $part . "`";
+			if($part === "*") {
+				$return .= $part;
+			} else {
+				$return .= "`" . $part . "`";
+			}
 
 			$start = false;
 		}
@@ -266,7 +276,7 @@ function columnIsEqual($colA, $colB, $fuzzyMatch = false) {
 		if($colA === $colB) {
 			return true;
 		} else {
-			return true;
+			return false;
 		}
 	}
 

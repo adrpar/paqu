@@ -1,4 +1,4 @@
-CALL paquExec('SELECT snapnum AS `snapnum`,expz AS `expz` FROM MDR1.FOF WHERE ( `snapnum` = 85 )    LIMIT 0,10', 'aggregation_tmp_33732860')
+CALL paquExec('SELECT `snapnum` AS `snapnum`,`expz` AS `expz` FROM MDR1.FOF WHERE ( `snapnum` = 85 )    LIMIT 0,10', 'aggregation_tmp_33732860')
 CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard.aggregation_tmp_1758943 ENGINE=MyISAM SELECT `h`.`snapnum` AS `h.snapnum`,`h`.`expz` AS `h.expz` FROM ( SELECT `snapnum`,`expz` FROM `aggregation_tmp_33732860`    LIMIT 0,10) AS `h`  LIMIT 0
 USE spider_tmp_shard; INSERT INTO spider_tmp_shard.aggregation_tmp_1758943 SELECT `h`.`snapnum` AS `h.snapnum`,`h`.`expz` AS `h.expz` FROM ( SELECT `snapnum`,`expz` FROM `aggregation_tmp_33732860`    LIMIT 0,10) AS `h` ; CALL paquLinkTmp('aggregation_tmp_1758943')
 CALL paquDropTmp('aggregation_tmp_33732860')
