@@ -847,7 +847,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 			    $this->parsed['WHERE'][] = array('expr_type' => 'operator', 'base_expr' => 'and', 'sub_tree' => "");
 			}
 			if (!$parser)
-			    $parser = new PHPSQLParser();
+			    $parser = new \PHPSQLParser\PHPSQLParser();
 			$this->messages[] = "Where clause push detected.  Pushing additional WHERE condition:'" . $this->push_where . "' to each storage node.\n";
 			if ($this->push_where)
 			    foreach ($parser->process_expr_list($parser->split_sql($this->push_where)) as $item)
