@@ -1,0 +1,5 @@
+CALL paquExec('SELECT `sub`.* AS `sub.*`,`sub`.`snapnum` AS `sub__snapnum`,`sub`.`hostFlag` AS `sub__hostFlag`,`sub`.`Mvir` AS `sub__Mvir` FROM MDPL.BDMW AS `sub` WHERE ( `sub`.`snapnum` = 88 )   ', 'aggregation_tmp_81546201')
+CALL paquExec('SELECT `host`.* AS `host.*`,`host`.`bdmId` AS `host__bdmId`,`host`.`Mvir` AS `host__Mvir`,`sub`.`sub.*` AS `sub.*`,`sub`.`sub__snapnum` AS `sub__snapnum`,`sub`.`sub__hostFlag` AS `sub__hostFlag`,`sub`.`sub__Mvir` AS `sub__Mvir` FROM MDPL.BDMW AS `host` JOIN ( SELECT `sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir` FROM `aggregation_tmp_81546201`   ) AS `sub`  WHERE ( `host`.`snapnum` = 88 ) and ( `host`.`bdmId` = `sub`.`sub__hostFlag` ) and ( `host`.`Mvir` < `sub`.`sub__Mvir` )   ', 'aggregation_tmp_32360823')
+CALL paquDropTmp('aggregation_tmp_81546201')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `host.*`,`host__bdmId`,`host__Mvir`,`sub.*`,`sub__snapnum`,`sub__hostFlag`,`sub__Mvir` FROM `aggregation_tmp_32360823`   
+CALL paquDropTmp('aggregation_tmp_32360823')

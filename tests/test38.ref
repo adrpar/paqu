@@ -1,0 +1,7 @@
+CALL paquExec('SELECT `m`.`ahfId_Gas` AS `m.ahfId_Gas`,`m`.`ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGGas.AHFMatch AS `m` ', 'aggregation_tmp_45770318')
+CALL paquExec('SELECT `gas`.`ahfId` AS `gas.ahfId`,`gas`.`Mvir` AS `gas.Mvir`,`m`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`m`.`m.ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGGas.AHF AS `gas` JOIN ( SELECT `m.ahfId_Gas`,`m.ahfId_DM` FROM `aggregation_tmp_45770318`   ) AS `m`  WHERE ( `m`.`m.ahfId_Gas` = `gas`.`ahfId` )   ', 'aggregation_tmp_73258946')
+CALL paquExec('SELECT `dm`.`ahfId` AS `dm.ahfId`,`dm`.`Mvir` AS `dm.Mvir`,`gas`.`gas.ahfId` AS `gas.ahfId`,`gas`.`gas.Mvir` AS `gas.Mvir`,`gas`.`m.ahfId_Gas` AS `m.ahfId_Gas`,`gas`.`m.ahfId_DM` AS `m.ahfId_DM` FROM Clues3_LGDM.AHF AS `dm` JOIN ( SELECT `gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM` FROM `aggregation_tmp_73258946`  ORDER BY `gas.Mvir` DESC ) AS `gas`  WHERE ( `gas`.`m.ahfId_DM` = `dm`.`ahfId` )  ORDER BY `gas`.`Mvir` DESC  LIMIT 0,10', 'aggregation_tmp_95674943')
+CALL paquDropTmp('aggregation_tmp_45770318')
+CALL paquDropTmp('aggregation_tmp_73258946')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `dm.ahfId`,`dm.Mvir`,`gas.ahfId`,`gas.Mvir`,`m.ahfId_Gas`,`m.ahfId_DM` FROM `aggregation_tmp_95674943`  ORDER BY `gas.Mvir` DESC  LIMIT 0,10
+CALL paquDropTmp('aggregation_tmp_95674943')

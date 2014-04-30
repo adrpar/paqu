@@ -30,8 +30,12 @@
 
 /* This script requires PEAR Net_Gearman */
 /* It also requires Console_Getopt, but this should be installed by default with pear */
-require_once 'php-sql-parser.php';
+if(!class_exists("PHPSQLParser"))
+	require_once 'php-sql-parser/src/PHPSQLParser/PHPSQLParser.php';
+
 require_once 'parOptimImplicitJoin.php';
+require_once 'paquUtils.php';
+
 #$params = get_commandline();
 #FIXME: This should not extend MySQLDAl, but should create a new DL object
 #DL needs additions such as creating table, check existence of table, etc.
@@ -100,7 +104,11 @@ class ShardQuery {
 				$error[] = array('error_clause' => '*', 'error_reason' => '"SELECT *" is not supported');
 				continue;
 		    }*/
-		    $alias = $clause['alias'];
+		    if(isset($clause['alias']['name']) && !empty($clause['alias']['name'])) {
+			    $alias = "`" . trim($clause['alias']['name'], "`") . "`";
+		    } else {
+			    $alias = "`" . $clause['base_expr'] . "`";
+		    }
 
 		    if (strpos($alias, '.')) {
 				$alias = trim($alias, '``');
@@ -108,7 +116,7 @@ class ShardQuery {
 
 				if (count($tmp) > 2) {
 				    #this is a more complicated expression, use the alias as it is (might be a formula or something)
-				    $alias = "`" . substr(trim($clause['alias'], "`"), 0, 50) . "`";
+				    $alias = "`" . substr(trim($clause['alias']['name'], "`"), 0, 50) . "`";
 				} else {
 				    $alias = $tmp[0] . "." . $tmp[1];
 				    $alias = "`$alias`";
@@ -116,190 +124,190 @@ class ShardQuery {
 		    }
 
 		    //further escape any function name that might end up in the alias
-            if ($clause['expr_type'] === "aggregate_function" ||
-                    $clause['expr_type'] === "function") {
+		    //the new parser does not add anything helpfull to equations - so we need to look for stuff
+		    //without any expr_type
+            if ((isset($clause['expr_type']) && ($clause['expr_type'] === "aggregate_function" ||
+                    $clause['expr_type'] === "function" || $clause['expr_type'] === "bracket_expression")) ) {
 
                 //build escaped string
-        		if(trim($alias, "`") === $clause['base_expr']) {
-	                $alias = "_" . $this->buildEscapedString(array($clause));
+        		if(trim($alias, "`") === $clause['base_expr'] || $alias === "``") {
+	                $alias = buildEscapedString(array($clause));
+	        		$alias = "`" . $alias . "`";
         		}
         	}
 
 		    $base_expr = $clause['base_expr'];
 
+		    if(!isset($clause['expr_type'])) {
+		    	continue;
+		    }
+
 		    switch ($clause['expr_type']) {
-				case 'expression':
 				case 'aggregate_function':
-				    if ($clause['sub_tree'][0]['expr_type'] == 'aggregate_function') {
-						$is_aggregate = true;
-						$skip_next = true;
-						$base_expr = $clause['sub_tree'][1]['base_expr'];
-						$alias = "`" . substr(trim($clause['alias'], "`"), 0, 50) . "`";
-						$function = $clause['sub_tree'][0]['base_expr'];
+					$is_aggregate = true;
+					$skip_next = true;
 
-						switch ($function) {
-						    #these are aggregates that dont need special treatment on the coordination side
-						    case 'MIN':
-						    case 'MAX':
-						    case 'SUM':
-								$used_agg_func = 1;
-								$base_expr = trim($base_expr, ' ()');
-								$base_expr = fix_trunc_parenth($base_expr);
-								$expr_info = explode(" ", $base_expr);
-								if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
-								    if ($this->verbose) {
-										echo "Detected a {$function} [DISTINCT] expression!\n";
-								    }
-
-								    unset($expr_info[0]);
-								    $new_expr = join(" ", $expr_info);
-								    $shard_query .= "$new_expr AS $alias";
-								    $coord_query .= "{$function}(distinct $alias) as $alias";
-								    $push_group[] = $pos + 1;
-								} else {
-								    switch ($function) {
-										case 'SUM':
-										    $coord_odku[] = "$alias=$alias +  VALUES($alias)";
-										    break;
-										case 'MIN':
-										    $coord_odku[] = "$alias=IF($alias < VALUES($alias), VALUES($alias),$alias)";
-										    break;
-										case 'MAX':
-										    $coord_odku[] = "$alias=IF($alias > VALUES($alias), VALUES($alias), $alias)";
-										    break;
-								    }
-								    $shard_query .= "{$function}({$base_expr}) AS $alias";
-								    $coord_query .= "{$function}({$alias}) AS $alias";
-								}
-
-								break;
-
-						    #special treatment needed
-						    case 'AVG':
-						    case 'STDDEV':
-						    case 'STD':
-						    case 'STDDEV_POP':
-						    case 'STDDEV_SAMP':
-						    case 'VARIANCE':
-						    case 'VAR_POP':
-						    case 'VAR_SAMP':
-						    case 'GROUP_CONCAT':
-								$used_agg_func = 1;
-								$base_expr = trim($base_expr, ' ()');
-								$base_expr = fix_trunc_parenth($base_expr);
-								$expr_info = explode(" ", $base_expr);
-								if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
-								    if ($this->verbose) {
-										echo "Detected a {$function} [DISTINCT] expression!\n";
-								    }
-
-								    unset($expr_info[0]);
-								    $new_expr = join(" ", $expr_info);
-								    $shard_query .= "$new_expr AS $alias";
-								    $coord_query .= "{$function}(distinct $alias) as $alias";
-								} else {
-								    switch ($function) {
-										case 'AVG':
-										    $alias = trim($alias, '`');
-										    $shard_query .= " COUNT({$base_expr}) AS `cnt_{$alias}`, SUM({$base_expr}) AS `sum_{$alias}`";
-										    $coord_query .= " (SUM(`sum_{$alias}`) / SUM(`cnt_{$alias}`)) AS `$alias`";
-										    break;
-										case 'STDDEV':
-										case 'STD':
-										case 'STDDEV_POP':
-										    $alias = trim($alias, '`');
-										    $avgAlias = '`agr_' . $alias . '`';
-										    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
-										    $coord_query .= " SQRT(partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1)) AS `$alias`";
-										    break;
-
-										case 'STDDEV_SAMP':
-										    $alias = trim($alias, '`');
-										    $avgAlias = '`agr_' . $alias . '`';
-										    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
-										    $coord_query .= " SQRT(partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / SUM(`cnt_{$alias}`)) AS `$alias`";
-										    break;
-
-										case 'VARIANCE':
-										case 'VAR_POP':
-										    $alias = trim($alias, '`');
-										    $avgAlias = '`agr_' . $alias . '`';
-										    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
-										    $coord_query .= " partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1) AS `$alias`";
-										    break;
-
-										case 'VAR_SAMP':
-										    $alias = trim($alias, '`');
-										    $avgAlias = '`agr_' . $alias . '`';
-										    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
-										    $coord_query .= " partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1) AS `$alias`";
-										    break;
-
-										default:
-										    $shard_query .= "{$function}({$base_expr}) AS $alias";
-										    $coord_query .= "{$function}({$alias}) AS $alias";
-										    break;
-								    }
-								}
-								$push_group[] = $pos + 1;
-								$group_aliases[] = $alias;
-
-								break;
-
-						    case 'COUNT':
-								$used_agg_func = 1;
-								$base_expr = trim($base_expr, ' ()');
-								$base_expr = fix_trunc_parenth($base_expr);
-
-								$expr_info = explode(" ", $base_expr);
-								if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
-								    if ($this->verbose) {
-										echo "Detected a COUNT [DISTINCT] expression!\n";
-								    }
-								    unset($expr_info[0]);
-								    $new_expr = join(" ", $expr_info);
-								    $shard_query .= "$new_expr AS $alias";
-								    $coord_query .= "COUNT(distinct $alias) as $alias";
-								    $push_group[] = $pos + 1;
-								} else {
-								    $shard_query .= "COUNT({$base_expr}) AS $alias";
-								    $coord_query .= "SUM($alias) AS $alias";
-								    $coord_odku[] = "$alias=$alias +  VALUES($alias)";
-								}
-
-								break;
-
-						    default:
-								$error[] = array('error_clause' => $clause['base_expr'],
-								    'error_reason' => 'Unsupported aggregate function');
-
-								break;
-						}
-			    	} else {
-			    		//if this is a function without arguments, add the parenthesis
-			    		if(strpos($base_expr, "(") === false) {
-			    			$base_expr .= "()";
-			    		}
-
-						$group[] = $pos + 1;
-						$group_aliases[] = $alias;
-
-						$shard_query .= $base_expr . ' AS ' . $alias;
-
-						#if this is a temporary column used for grouping, don't select it in the coordination query
-						if (!array_key_exists('group_clause', $clause) && $whereSubquery === false) {
-						    $coord_query .= $alias;
-						    $coord_odku[] = "$alias=VALUES($alias)";
+					if(strpos($base_expr, "(") === false) {
+						if(!empty($clause['sub_tree'])) {
+							$base_expr = "";
+							foreach($clause['sub_tree'] as $node) {
+								$base_expr .= getBaseExpr($node);
+							}
 						} else {
-						    $coord_query = substr($coord_query, 0, -1);
+							$base_expr = "";
 						}
-			    	}
+	    			} else {
+	    				$base_expr = $clause['base_expr'];
+	    			}
 
-				    break;
+					$alias = "`" . substr(trim($clause['alias']['name'], "`"), 0, 50) . "`";
+					$function = strtoupper($clause['base_expr']);
 
+					switch ($function) {
+					    #these are aggregates that dont need special treatment on the coordination side
+					    case 'MIN':
+					    case 'MAX':
+					    case 'SUM':
+							$used_agg_func = 1;
+							$base_expr = trim($base_expr, ' ()');
+							$base_expr = fix_trunc_parenth($base_expr);
+							$expr_info = explode(" ", $base_expr);
+							if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
+							    if ($this->verbose) {
+									echo "Detected a {$function} [DISTINCT] expression!\n";
+							    }
+
+							    unset($expr_info[0]);
+							    $new_expr = join(" ", $expr_info);
+							    $shard_query .= "$new_expr AS $alias";
+							    $coord_query .= "{$function}(distinct $alias) as $alias";
+							    $push_group[] = $pos + 1;
+							} else {
+							    switch ($function) {
+									case 'SUM':
+									    $coord_odku[] = "$alias=$alias +  VALUES($alias)";
+									    break;
+									case 'MIN':
+									    $coord_odku[] = "$alias=IF($alias < VALUES($alias), VALUES($alias),$alias)";
+									    break;
+									case 'MAX':
+									    $coord_odku[] = "$alias=IF($alias > VALUES($alias), VALUES($alias), $alias)";
+									    break;
+							    }
+							    $shard_query .= "{$function}({$base_expr}) AS $alias";
+							    $coord_query .= "{$function}({$alias}) AS $alias";
+							}
+
+							break;
+
+					    #special treatment needed
+					    case 'AVG':
+					    case 'STDDEV':
+					    case 'STD':
+					    case 'STDDEV_POP':
+					    case 'STDDEV_SAMP':
+					    case 'VARIANCE':
+					    case 'VAR_POP':
+					    case 'VAR_SAMP':
+					    case 'GROUP_CONCAT':
+							$used_agg_func = 1;
+							$base_expr = trim($base_expr, ' ()');
+							$base_expr = fix_trunc_parenth($base_expr);
+							$expr_info = explode(" ", $base_expr);
+							if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
+							    if ($this->verbose) {
+									echo "Detected a {$function} [DISTINCT] expression!\n";
+							    }
+
+							    unset($expr_info[0]);
+							    $new_expr = join(" ", $expr_info);
+							    $shard_query .= "$new_expr AS $alias";
+							    $coord_query .= "{$function}(distinct $alias) as $alias";
+							} else {
+							    switch ($function) {
+									case 'AVG':
+									    $alias = trim($alias, '`');
+									    $shard_query .= " COUNT({$base_expr}) AS `cnt_{$alias}`, SUM({$base_expr}) AS `sum_{$alias}`";
+									    $coord_query .= " (SUM(`sum_{$alias}`) / SUM(`cnt_{$alias}`)) AS `$alias`";
+									    break;
+									case 'STDDEV':
+									case 'STD':
+									case 'STDDEV_POP':
+									    $alias = trim($alias, '`');
+									    $avgAlias = '`agr_' . $alias . '`';
+									    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
+									    $coord_query .= " SQRT(partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1)) AS `$alias`";
+									    break;
+
+									case 'STDDEV_SAMP':
+									    $alias = trim($alias, '`');
+									    $avgAlias = '`agr_' . $alias . '`';
+									    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
+									    $coord_query .= " SQRT(partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / SUM(`cnt_{$alias}`)) AS `$alias`";
+									    break;
+
+									case 'VARIANCE':
+									case 'VAR_POP':
+									    $alias = trim($alias, '`');
+									    $avgAlias = '`agr_' . $alias . '`';
+									    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
+									    $coord_query .= " partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1) AS `$alias`";
+									    break;
+
+									case 'VAR_SAMP':
+									    $alias = trim($alias, '`');
+									    $avgAlias = '`agr_' . $alias . '`';
+									    $shard_query .= " sum_of_squares({$base_expr}) AS `ssqr_{$alias}`, AVG({$base_expr}) as `avg_{$alias}`, COUNT({$base_expr}) AS `cnt_{$alias}`";
+									    $coord_query .= " partitAdd_sum_of_squares(`ssqr_{$alias}`, `avg_{$alias}`, `cnt_{$alias}`) / (SUM(`cnt_{$alias}`) - 1) AS `$alias`";
+									    break;
+
+									default:
+									    $shard_query .= "{$function}({$base_expr}) AS $alias";
+									    $coord_query .= "{$function}({$alias}) AS $alias";
+									    break;
+							    }
+							}
+							$push_group[] = $pos + 1;
+							$group_aliases[] = $alias;
+
+							break;
+
+					    case 'COUNT':
+							$used_agg_func = 1;
+							$base_expr = trim($base_expr, ' ()');
+							$base_expr = fix_trunc_parenth($base_expr);
+
+							$expr_info = explode(" ", $base_expr);
+							if (!empty($expr_info[0]) && strtolower($expr_info[0]) == 'distinct') {
+							    if ($this->verbose) {
+									echo "Detected a COUNT [DISTINCT] expression!\n";
+							    }
+							    unset($expr_info[0]);
+							    $new_expr = join(" ", $expr_info);
+							    $shard_query .= "$new_expr AS $alias";
+							    $coord_query .= "COUNT(distinct $alias) as $alias";
+							    $push_group[] = $pos + 1;
+							} else {
+							    $shard_query .= "COUNT({$base_expr}) AS $alias";
+							    $coord_query .= "SUM($alias) AS $alias";
+							    $coord_odku[] = "$alias=$alias +  VALUES($alias)";
+							}
+
+							break;
+
+					    default:
+							$error[] = array('error_clause' => $clause['base_expr'],
+							    'error_reason' => 'Unsupported aggregate function');
+
+							break;
+					}
+					break;
+
+				case 'expression':
 				case 'operator':
 				case 'const':
 				case 'colref':
+				case 'bracket_expression':
 				case 'reserved':
 				case 'function':
 				    $group[] = $pos + 1;
@@ -307,13 +315,20 @@ class ShardQuery {
 
 		    		//if this is a function without arguments, add the parenthesis
 		    		if($clause['expr_type'] === 'function' && strpos($base_expr, "(") === false) {
-		    			$base_expr .= "()";
+					    $base_expr = getBaseExpr($clause);
 		    		}
-
+		    		//var_dump($alias); die(0);
 				    $shard_query .= $base_expr . ' AS ' . $alias;
-				    
+
+					#if this is a temporary column used for grouping, don't select it in the coordination query
+					#TODO: CHECK IF THIS IS STILLN NEEDED!
+					/*if (!array_key_exists('group_clause', $clause) && $whereSubquery === false) {
+					    $coord_query .= $alias;
+					    $coord_odku[] = "$alias=VALUES($alias)";
+					}*/
+
 				    #exclude certain aggregation expressions
-				    if (strpos($alias, 'agr_stddev') === false) {
+				    if (strpos($alias, 'agr_stddev') === false && !array_key_exists('group_clause', $clause)) {
 						#if this is a temporary column from WHERE, don't select it in the coordination
 						if(!array_key_exists('where_col', $clause) || $recLevel >= 0) {
 						    #don't select order by columns, that are implicit
@@ -427,13 +442,13 @@ class ShardQuery {
 		}
 
 		#escape the table name if it is unescaped
-		if ($tables[0]['alias'] != "" && $tables[0]['alias'][0] != '`' && $tables[0]['alias'][0] != '(')
-		    $tables[0]['alias'] = '`' . $tables[0]['alias'] . '`';
+		if ($tables[0]['alias']['name'] != "" && $tables[0]['alias']['name'][0] != '`' && $tables[0]['alias']['name'][0] != '(')
+		    $tables[0]['alias']['name'] = $tables[0]['alias']['name'];
 
 		#the first table is always prefixed by FROM
 		$sql = "FROM " . $tables[0]['table'];
-		if($tables[0]['alias'] != "") {
-		    $sql .= ' AS ' . $tables[0]['alias'];
+		if($tables[0]['alias']['name'] != "") {
+		    $sql .= ' AS ' . "`" . trim($tables[0]['alias']['name'], "`") . "`";
 		}
 		
 		$cnt = count($tables);
@@ -448,19 +463,19 @@ class ShardQuery {
 
 		    if ($sql)
 				$sql .= " ";
-		    if ($tables[$i]['alias'] != "" && $tables[$i]['alias'][0] != '`' && $tables[$i]['alias'][0] != '(') {
-				$pos = strpos($tables[$i]['alias'], '.');
+		    if ($tables[$i]['alias']['name'] != "" && $tables[$i]['alias']['name'][0] != '`' && $tables[$i]['alias']['name'][0] != '(') {
+				$pos = strpos($tables[$i]['alias']['name'], '.');
 				if ($pos !== false) {
-				    $info = explode('.', $tables[$i]['alias']);
+				    $info = explode('.', $tables[$i]['alias']['name']);
 				    $table = $info[1];
-				    $tables[$i]['alias'] = '`' . $table . '`';
+				    $tables[$i]['alias']['name'] = $table;
 				} else {
-				    $tables[$i]['alias'] = '`' . $tables[$i]['alias'] . '`';
+				    $tables[$i]['alias']['name'] = $tables[$i]['alias']['name'];
 				}
 		    }
 		    $sql .= $tables[$i]['join_type'] . ' ' . $tables[$i]['table'];
-		    if($tables[$i]['alias'] != "")
-				$sql .= ' AS ' . $tables[$i]['alias'];
+		    if($tables[$i]['alias']['name'] != "")
+				$sql .= ' AS ' . "`" . trim($tables[$i]['alias']['name'], "`") . "`";
 			$sql .= ' ' . $tables[$i]['ref_type'] . $tables[$i]['ref_clause'];
 		}
 
@@ -495,7 +510,7 @@ class ShardQuery {
 	}
     }
 
-    function process_where($where) {
+	function process_where($where) {
 		$this->in_lists = array();
 		$prev = "";
 		$next_is_part_key = false;
@@ -507,11 +522,10 @@ class ShardQuery {
 		$sql = "WHERE";
 		$queries = array($sql);
 
-		$start_count = count($where);
 		foreach ($where as $pos => $clause) {
-		    $tmpSql = "";
-		    $isSubquery = false;
-		    
+			$tmpSql = "";
+			$isSubquery = false;
+
 		    if($clause['sub_tree'] !== false) {
 				foreach($clause['sub_tree'] as $key => $subNode) {
 				    if($subNode['expr_type'] == 'subquery') {
@@ -521,6 +535,7 @@ class ShardQuery {
 						$this->table_name = "aggregation_tmp_" . mt_rand(1, 100000000);
 						$this->process_sql($subNode['sub_tree'], 0, true);
 						$this->parsed = $tmpTree;
+
 						$this->subqueries[$this->table_name] = $this->shard_sql;
 						$this->subqueries[$this->table_name]['parallel'] = true;
 
@@ -538,93 +553,93 @@ class ShardQuery {
 				    $clause['base_expr'] = $tmpSql;
 				}
 		    }
-		    	    
-		    if (empty($where[$pos]))
+
+			if (empty($where[$pos]))
 				continue;
-		    $sql .= " ";
-		    $this->append_all($queries, " ");
-		    if ($next_is_part_key) {
+			$sql .= " ";
+			$this->append_all($queries, " ");
+			if ($next_is_part_key) {
 				if (!trim($clause['base_expr']))
-				    continue;
+					continue;
 				if ($clause['expr_type'] == 'const' && $shard_id = $this->get_partition_info($prev, $clause['base_expr'])) {
-				    if ($this->verbose)
+					if ($this->verbose)
 						echo "PARTITION SELECTION SELECTED SHARD_ID: $shard_id\n";
-				    $this->force_shard = $shard_id;
+					$this->force_shard = $shard_id;
 				}
 				$next_is_part_key = false;
-		    }
+			}
 
-		    if ($clause['expr_type'] == 'operator') {
+			if ($clause['expr_type'] == 'operator') {
 				if (strtolower($clause['base_expr']) == 'between' &&
-					$this->between_opt && ($this->between_opt == '*' || $this->between_opt == $prev)) {
-				    $offset = 0;
-				    $operands = array();
-				    #find the operands to the between expression	
-				    $and_count = 0;
+						$this->between_opt && ($this->between_opt == '*' || $this->between_opt == $prev)) {
+					$offset = 0;
+					$operands = array();
+					#find the operands to the between expression	
+					$and_count = 0;
 
-				    for ($n = $pos + 1; $n < $start_count; ++$n) {
+					for ($n = $pos + 1; $n < $start_count; ++$n) {
 						if ($where[$n]['expr_type'] == 'operator' && strtoupper($where[$n]['base_expr']) == 'AND') {
-						    if ($and_count) {
+							if ($and_count) {
 								break;
-						    } else {
+							} else {
 								$and_count+=1;
-			    			}
+							}
 						}
 						$operands[$offset] = array('pos' => $n, 'base_expr' => $where[$n]['base_expr']);
 						++$offset;
-				    }
+					}
 
-				    #determine what kinds of operands are in use
-				    $matches = $vals = array();
-				    $is_date = false;
+					#determine what kinds of operands are in use
+					$matches = $vals = array();
+					$is_date = false;
 
-				    if (is_numeric(trim($operands[0]['base_expr'])) ||
-					    preg_match("/('[0-9]+-[0-9]+-[0-9]+')/", $operands[0]['base_expr'], $matches)) {
+					if (is_numeric(trim($operands[0]['base_expr'])) ||
+							preg_match("/('[0-9]+-[0-9]+-[0-9]+')/", $operands[0]['base_expr'], $matches)) {
 						if ($matches) {
-						    $vals[0] = $matches[0];
-						    $matches = array();
-						    preg_match("/('[0-9]+-[0-9]+-[0-9]+')/", $operands[2]['base_expr'], $matches);
-						    $vals[1] = $matches[0];
+							$vals[0] = $matches[0];
+							$matches = array();
+							preg_match("/('[0-9]+-[0-9]+-[0-9]+')/", $operands[2]['base_expr'], $matches);
+							$vals[1] = $matches[0];
 
-						    $is_date = true;
+							$is_date = true;
 						} else {
-						    $vals[0] = $operands[0]['base_expr'];
-						    $vals[1] = $operands[2]['base_expr'];
+							$vals[0] = $operands[0]['base_expr'];
+							$vals[1] = $operands[2]['base_expr'];
 						}
 						if (!$is_date) {
-						    $sub_tree = array();
-						    for ($n = $vals[0]; $n <= $vals[1]; ++$n) {
+							$sub_tree = array();
+							for ($n = $vals[0]; $n <= $vals[1]; ++$n) {
 								$sub_tree[] = $n;
-						    }
+							}
 						} else {
 
-						    #conversion of date between requires connecting
-						    #to the database to make sure that the date_diff calculation
-						    #is accurate for the timezone in which the database servers are
+							#conversion of date between requires connecting
+							#to the database to make sure that the date_diff calculation
+							#is accurate for the timezone in which the database servers are
 
-						    $date_sql = "SELECT datediff(" . $vals[1] . ',' . $vals[0] . ") as `d`";
-						    if ($this->verbose) {
+							$date_sql = "SELECT datediff(" . $vals[1] . ',' . $vals[0] . ") as `d`";
+							if ($this->verbose) {
 								echo "Sending SQL to do date calculation:\n$date_sql\n\n";
-						    }
+							}
 
-						    $stmt = $this->my_query($date_sql);
-						    if (!$stmt) {
+							$stmt = $this->my_query($date_sql);
+							if (!$stmt) {
 								throw new Exception("While doing date diff: " . $this->my_error($this->conn));
-						    }
+							}
 
-						    $row = mysql_fetch_assoc($stmt);
-						    $days = $row['d'];
-						    for ($n = 0; $n <= $days; ++$n) {
+							$row = mysql_fetch_assoc($stmt);
+							$days = $row['d'];
+							for ($n = 0; $n <= $days; ++$n) {
 								$sub_tree[] = $vals[0] . " + interval $n day";
-						    }
+							}
 						}
 
 						for ($n = $pos + 1; $n <= $operands[2]['pos']; ++$n) {
-						    unset($where[$n]);
+							unset($where[$n]);
 						}
 
 						if ($this->verbose) {
-						    $this->messages[] = "A BETWEEN has been converted to an IN list with " . count($sub_tree) . " items\n";
+							$this->messages[] = "A BETWEEN has been converted to an IN list with " . count($sub_tree) . " items\n";
 						}
 						$this->in_lists[] = $sub_tree;
 						$old = $queries;
@@ -634,83 +649,82 @@ class ShardQuery {
 						$sub_tree = array_values($sub_tree);
 
 						if (count($sub_tree) >= $this->inlist_merge_threshold) {
-						    for ($z = 0; $z < count($sub_tree); ++$z) {
+							for ($z = 0; $z < count($sub_tree); ++$z) {
 								if ($ilist)
-								    $ilist .= ",";
+									$ilist .= ",";
 								$ilist .= $sub_tree[$z];
 								if ((($z + 1) % $this->inlist_merge_size) == 0) {
-								    foreach ($old as $sql) {
+									foreach ($old as $sql) {
 										$queries[] = $sql . " IN (" . $ilist . ")";
-								    }
-								    $ilist = "";
+									}
+									$ilist = "";
 								}
-						    }
-						    foreach ($old as $sql) {
+							}
+							foreach ($old as $sql) {
 								if ($ilist)
-								    $queries[] = $sql . " IN (" . $ilist . ")";
-						    }
-						    $ilist = "";
+									$queries[] = $sql . " IN (" . $ilist . ")";
+							}
+							$ilist = "";
 						} else {
-						    foreach ($sub_tree as $val) {
+							foreach ($sub_tree as $val) {
 								foreach ($old as $sql) {
-							 	   $queries[] = $sql .= " = $val";
+									$queries[] = $sql .= " = $val";
 								}
-						    }
+							}
 						}
 
 						unset($sub_tree);
 
 						continue;
-		    		} else {
-					if ($this->verbose) {
-			    		echo "BETWEEN could not be optimized - invalid operands\n";
+					} else {
+						if ($this->verbose) {
+							echo "BETWEEN could not be optimized - invalid operands\n";
+						}
 					}
-		    	}
-			} elseif ($clause['base_expr'] == '=' &&
-				($this->partition_column && strtolower($this->partition_column) == strtolower($prev) && !$this->force_broadcast )) {
-			    if (!$this->force_shard) {
-					$next_is_part_key = true;
-			    } else {
-					if ($this->verbose) {
-					    echo "More than one partition key found.  Query broadcast forced\n";
+				} elseif ($clause['base_expr'] == '=' &&
+						($this->partition_column && strtolower($this->partition_column) == strtolower($prev) && !$this->force_broadcast )) {
+					if (!$this->force_shard) {
+						$next_is_part_key = true;
+					} else {
+						if ($this->verbose) {
+							echo "More than one partition key found.  Query broadcast forced\n";
+						}
+						$this->force_shard = false;
+						$this->force_broadcast = true;
 					}
-					$this->force_shard = false;
-					$this->force_broadcast = true;
-		    	}
-			}
-			$this->append_all($queries, $clause['base_expr']);
-	    } elseif ($clause['expr_type'] != 'in-list') {
-			$this->append_all($queries, $clause['base_expr']);
-			$prev = $clause['base_expr'];
-	    } elseif ($this->inlist_opt && ($this->inlist_opt == '*' || $this->inlist_opt == $prev)) {
-			$old = $queries;
-			$queries = array();
+					$this->append_all($queries, $clause['base_expr']);
+				}
+				$this->append_all($queries, $clause['base_expr']);
+			} elseif ($this->inlist_opt && ($this->inlist_opt == '*' || $this->inlist_opt == $prev)) {
+				$old = $queries;
+				$queries = array();
 
-			foreach ($clause['sub_tree'] as $vals) {
-			    foreach ($old as $sql) {
-					$queries[] = "$sql ($vals) ";
-			    }
+				foreach ($clause['sub_tree'] as $vals) {
+					foreach ($old as $sql) {
+						$queries[] = "$sql ($vals) ";
+					}
+				}
+			} elseif ($clause['expr_type'] === 'function') {
+				if(strpos($clause['base_expr'], "(") === false) {
+					$prev = $clause['base_expr'] . "()";
+				} else {
+					$prev = $clause['base_expr'];
+				}
+				$this->append_all($queries, $prev);
+			} else {
+				$prev = $clause['base_expr'];
+				$this->append_all($queries, $prev);
 			}
-		} elseif ($clause['expr_type'] === 'function') {
-			Zend_Debug::dump($clause); die(0);
-			if(strpos($clause['base_expr'], "(") === false) {
-    			$prev = $clause['base_expr'] . "()";
-    		} else {
-    			$prev = $clause['base_expr'];
-    		}
-	    } else {
-			$prev = $clause['base_expr'];
-			$this->append_all($queries, $prev);
-	    }
+		}
+
+		foreach ($queries as $pos => $q) {
+			if (!trim($q))
+				unset($queries[$pos]);
+		}
+
+		return array_values($queries);
 	}
 
-	foreach ($queries as $pos => $q) {
-	    if (!trim($q))
-		unset($queries[$pos]);
-	}
-
-	return array_values($queries);
-    }
 
     /* if $sql is an Array(), then it is assumed it is already parsed */
 
@@ -733,7 +747,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 	if (!is_array($sql)) {
 	    #TODO: support parser re-use	
 	    #$this->parsed = $this->client->do('sql_parse',$sql);
-	    $parser = new PHPSQLParserOld($sql);
+	    $parser = new \PHPSQLParser\PHPSQLParser($sql);
 
 	    $this->parsed = PHPSQLbuildShardQuery($parser->parsed, $this->headNodeTables);
 	    $this->parsedCopy = $this->parsed;
@@ -833,7 +847,7 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 			    $this->parsed['WHERE'][] = array('expr_type' => 'operator', 'base_expr' => 'and', 'sub_tree' => "");
 			}
 			if (!$parser)
-			    $parser = new PHPSQLParserOld();
+			    $parser = new PHPSQLParser();
 			$this->messages[] = "Where clause push detected.  Pushing additional WHERE condition:'" . $this->push_where . "' to each storage node.\n";
 			if ($this->push_where)
 			    foreach ($parser->process_expr_list($parser->split_sql($this->push_where)) as $item)
@@ -856,12 +870,23 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 						$order_by_coord .= ",";
 				    
 				    #check if order by arguemnt is just a number. if yes, we dont need to quote this
-				    if(!empty($o['alias']) && is_numeric(trim($o['alias'], "`"))) {
-						$o['alias'] = trim($o['alias'], "`");
+				    if(isset($o['alias']['name']) && is_numeric(trim($o['alias']['name'], "`"))) {
+						$o['alias']['name'] = trim($o['alias']['name'], "`");
 				    }
-				    
-				    $order_by .= $o['alias'] . ' ' . $o['direction'];
-				    $order_by_coord .= $o['alias'] . ' ' . $o['direction'];
+
+				    if(isset($o['alias']['name']) && !empty($o['alias']['name'])) {
+					    $order_by .= "`" . trim($o['alias']['name'], "`") . "`" . ' ' . $o['direction'];
+					    $order_by_coord .= "`" . trim($o['alias']['name'], "`") . "`" . ' ' . $o['direction'];
+				    } else {
+					    $order_by .= "`" . trim($o['base_expr'], "`") . "`" . ' ' . $o['direction'];
+						if(isset($o['origParse']['sub_tree']) && $o['origParse']['sub_tree'] !== false) {
+						    $base = buildEscapedString(array($o['origParse']));
+						} else {
+							$base = str_replace("`", "", getBaseExpr($o));
+						}
+
+					    $order_by_coord .= "`" . $base . "`" . ' ' . $o['direction'];
+				    }
 				}
 
 				//only do order by on shards if LIMIT statement is present - otherwise sorting has
@@ -884,12 +909,18 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 				foreach ($this->parsed['GROUP'] as $g) {
 				    if ($group_by)
 						$group_by .= ",";
-				    $group_by .= $g['base_expr'];
+					$group_by = str_replace("`", "", getBaseExpr($g));
 
 				    if ($group_by_coord)
 						$group_by_coord .= ",";
 
-				    $group_by_coord .= $g['alias'];
+					if(isset($g['origParse']['sub_tree']) && $g['origParse']['sub_tree'] !== false) {
+					    $base = buildEscapedString(array($g['origParse']));
+					} else {
+						$base = $g['base_expr'];
+					}
+
+				    $group_by_coord .= "`" . $base . "`";
 				}
 
 				$group_by = " GROUP BY {$group_by}";
@@ -900,8 +931,11 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 		    $limit = "";
 		    $limit_coord = "";
 		    if (!empty($this->parsed['LIMIT'])) {
-				$limit .= " LIMIT {$this->parsed['LIMIT']['start']},{$this->parsed['LIMIT']['end']}";
-				$limit_coord .= " LIMIT {$this->parsed['LIMIT']['start']},{$this->parsed['LIMIT']['end']}";
+		        if($this->parsed['LIMIT']['offset'] == "")
+        			$this->parsed['LIMIT']['offset'] = 0;
+
+				$limit .= " LIMIT {$this->parsed['LIMIT']['offset']},{$this->parsed['LIMIT']['rowcount']}";
+				$limit_coord .= " LIMIT {$this->parsed['LIMIT']['offset']},{$this->parsed['LIMIT']['rowcount']}";
 				unset($this->parsed['LIMIT']);
 		    }
 
@@ -983,34 +1017,6 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 		return true;
     }
 
-    /**
-     * Function that will recursively go through the branch at the function to
-     * construct the escaped column name
-     * @param array $inNode SQL parse tree node
-     * @return string parts of the escaped function name
-     */
-    function buildEscapedString($inNode) {
-        $str = "";
-
-        foreach ($inNode as $currNode) {
-            $partStr = "";
-
-            if (array_key_exists("sub_tree", $currNode) && $currNode["sub_tree"] !== false) {
-                $partStr = $this->buildEscapedString($currNode["sub_tree"]);
-            }
-
-            $partStr = str_replace(".", "__", $partStr);
-
-            if ($currNode["expr_type"] === "aggregate_function" ||
-                    $currNode['expr_type'] === "function") {
-                $str .= $currNode["base_expr"] . "_" . $partStr;        #last "_" already added below
-            } else {
-                $str .= $currNode["base_expr"] . "_";
-            }
-        }
-
-        return $str;
-    }
 
 }
 
@@ -1030,5 +1036,4 @@ function fix_trunc_parenth($string) {
     
     return $string;    
 }
-
 ?>

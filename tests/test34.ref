@@ -1,0 +1,3 @@
+CALL paquExec('SELECT `b`.`x` AS `b.x`,`b`.`y` AS `b.y`,`b`.`z` AS `b.z`,`b`.`phkey` AS `b.phkey`,`b`.`Mvir` AS `b.Mvir` FROM MDPL.BDMW AS `b` WHERE ( `b`.`snapnum` = 88 )  ORDER BY `b`.`Mvir` DESC  LIMIT 0,10', 'aggregation_tmp_66962284')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `b.x`,`b.y`,`b.z`,`b.phkey`,`b.Mvir` FROM `aggregation_tmp_66962284`  ORDER BY `b.Mvir` DESC  LIMIT 0,10
+CALL paquDropTmp('aggregation_tmp_66962284')

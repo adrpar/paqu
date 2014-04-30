@@ -1,0 +1,3 @@
+CALL paquExec('SELECT * AS `*`,`MDR1`.`FOF`.`mass`AS`MDR1.FOF.mass` FROM MDR1.FOF WHERE ( `snapnum` = 85 )  ORDER BY `MDR1`.`FOF`.`mass` DESC  LIMIT 0,10', 'aggregation_tmp_94564325')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `*`, `MDR1.FOF.mass` FROM `aggregation_tmp_94564325`  ORDER BY `MDR1.FOF.mass` DESC  LIMIT 0,10
+CALL paquDropTmp('aggregation_tmp_94564325')

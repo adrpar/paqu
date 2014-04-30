@@ -66,7 +66,11 @@ function PHPSQLprepareQuery($query, $headNodeTables = array()) {
     if(!empty($shard_query->errors)) {
     	echo "An Error occured:\n\n";
     	foreach($shard_query->errors as $key => $error) {
-    	    echo $key . ": " . $error . "\n";
+        if(array_key_exists("error_clause", $error)) {
+    	    echo $key . ": clause: " . $error["error_clause"] . " error: " . $error["error_reason"] . "\n";
+        } else {
+          echo $key . ": clause: " . $error[0] . " error: " . $error[1] . "\n";
+        }
   	  }
 	
       throw new Exception('SQL Parse Error');
