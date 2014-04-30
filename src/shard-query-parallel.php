@@ -30,7 +30,7 @@
 
 /* This script requires PEAR Net_Gearman */
 /* It also requires Console_Getopt, but this should be installed by default with pear */
-if(!class_exists("PHPSQLParser"))
+if(!class_exists("\PHPSQLParser\PHPSQLParser"))
 	require_once 'php-sql-parser/src/PHPSQLParser/PHPSQLParser.php';
 
 require_once 'parOptimImplicitJoin.php';

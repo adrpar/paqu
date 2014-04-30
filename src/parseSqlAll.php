@@ -29,6 +29,8 @@
 
 error_reporting(E_ALL);
 
+require_once 'paquUtils.php';
+
 /**
  * @file parseSqlAll.php
  * @brief Parser that transforms SQL * attributes into full list of 
@@ -101,6 +103,11 @@ function processQueryWildcard($sqlTree, $mysqlConn = false, $zendAdapter = false
     //that needs to be changed as well
     _parseSqlAll_fixAliases($sqlTree);
 
+    //set delimiter of the last column in the SELECT statement to false
+    $lastNode = array_pop($sqlTree['SELECT']);
+    $lastNode['delim'] = false;
+    array_push($sqlTree['SELECT'], $lastNode);
+
     return $sqlTree;
 }
 
@@ -114,11 +121,11 @@ function _parseSqlAll_fixAliases(&$sqlTree) {
 	}
 
 	foreach($sqlTree['FROM'] as $node) {
-		if($node['expr_type'] == "subquery") {
+		if(isSubquery($node)) {
 			_parseSqlAll_fixAliases($node['sub_tree']);
 		}
 
-		if($node['alias'] !== false) {
+		if(hasAlias($node)) {
 			$fromList[$node['alias']['name']] = $node;
 		} else {
 			$fromList[$node['table']] = $node;
@@ -146,33 +153,26 @@ function _parseSqlAll_fixAliases(&$sqlTree) {
 
 function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList, &$selectTreeNode = FALSE) {
     foreach($sqlTree as &$node) {
-		if(array_key_exists("expr_type", $node) && $node['expr_type'] == "subquery") {
+		if(isSubquery($node)) {
 			_parseSqlAll_fixAliases($node['sub_tree']);
 		}
 
 		//only process colrefs
-		if((array_key_exists("expr_type", $node) && $node['expr_type'] !== "colref") || 
-			(array_key_exists("type", $node) && $node['type'] !== "expression")) {
+		if(!isColref($node) && !isExpression($node)) {
 			continue;
 		}
 
-		$tmp = _parseSqlAll_parseResourceName($node['base_expr']);
-
-		if(count($tmp) == 3) {
-			$table = $tmp[1];
-			$column = $tmp[2];
-		} else {
-			$table = false;
-			$column = $tmp[1];
-		}
+		$table = extractTableName($node);
+		$column = extractColumnName($node);
 
 		//we only need to change this column if it was retrieved from a subquery
 		if($table !== false && array_key_exists($table, $fromList) && 
-			$fromList[$table]['expr_type'] == "subquery" && $fromList[$table]['sub_tree'] != NULL) {
+			isSubquery($fromList[$table]) && $fromList[$table]['sub_tree'] != NULL) {
 			//look this column up in the sub select
 			foreach($fromList[$table]['sub_tree']['SELECT'] as $selNode) {
-                if($selNode['alias'] !== false && strpos($selNode['alias']['name'], $column)) {
+                if(hasAlias($selNode) && strpos($selNode['alias']['name'], $column)) {
                         $node['base_expr'] = "`" . $table . "`.`" . trim($selNode['alias']['name'], "`") . "`";
+                        $node['no_quotes'] = array("delim" => ".", "parts" => array($table, trim($selNode['alias']['name'], "`")));
                 }
 			}
 		} else if ($selectTreeNode !== FALSE) {
@@ -190,6 +190,7 @@ function _parseSqlAll_fixAliasesInNode(&$sqlTree, $fromList, &$selectTreeNode = 
 
 				if($aliasStrPos !== FALSE && strlen($nodeAlias) == $aliasStrPos + $strLenCurrAlias) {
 					$node['base_expr'] = $selNode['alias']['name'];
+                    $node['no_quotes'] = array("delim" => ".", "parts" => array($selNode['alias']['name']));
 				}
 			}
 		}
@@ -212,7 +213,7 @@ function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false, 
 	    return;
     
     foreach($sqlTree['FROM'] as &$node) {
-		if($node['expr_type'] == "subquery" && $node['sub_tree'] != NULL) {
+		if(isSubquery($node) && $node['sub_tree'] != NULL) {
 		    $tree = processQueryWildcard($node['sub_tree'], $mysqlConn, $zendAdapter);
 		    $node['sub_tree'] = $tree;
 		}
@@ -225,6 +226,7 @@ function _parseSqlAll_FROM(&$sqlTree, $mysqlConn = false, $zendAdapter = false, 
     		if(count($tmp) == 2) {
     			//add the database name
     			$node['table'] = '`' . trim($defaultDB, '`') . '`.' . $node['table'];
+    			$node['no_quotes'] = array("delim" => ".", "parts" => array(trim($defaultDB, '`'), $node['table']));
     		}
     	}
     }
@@ -245,7 +247,7 @@ function _parseSqlAll_WHERE(&$sqlTree, $mysqlConn = false, $zendAdapter = false)
 	    return;
 
     foreach($sqlTree['WHERE'] as &$node) {
-		if($node['expr_type'] == "subquery") {
+		if(isSubquery($node)) {
 		    $tree = processQueryWildcard($node['sub_tree'], $mysqlConn, $zendAdapter);
 	    	    $node['sub_tree'] = $tree->parsed;
 		}
@@ -277,23 +279,16 @@ function _parseSqlAll_SELECT(&$sqlTree, $mysqlConn = false, $zendAdapter = false
 			//we have found an all operator and need to find the corresponding
 			//table to look things up
 
-			$tmp = _parseSqlAll_parseResourceName($node['base_expr']);
-
-			//make things nicer
-			$dbName = false;
-			$tableName = false;
 			$tableFullName = false;
-			if(count($tmp) === 4) {
-				$dbName = $tmp[1];
-				$tableName = $tmp[2];
-				$tableFullName = "`" . $tmp[1] . "`.`" . $tmp[2] . "`";
-				$colName = $tmp[3];
-			} else if (count($tmp) === 3) {
-				$tableName = $tmp[1];
-				$tableFullName = "`" . $tmp[1] . "`";
-				$colName = $tmp[2];
-			} else if (count($tmp) === 2) {
-				$colName = $tmp[1];
+
+			$dbName = extractDbName($node);
+			$tableName = extractTableName($node);
+			$colName = extractColumnName($node);
+
+			if($dbName !== false) {
+				$tableFullName = "`" . $dbName . "`.`" . $tableName . "`";
+			} else if ($tableName !== false) {
+				$tableFullName = "`" . $tableName . "`";
 			}
 
 			$table = array();
@@ -301,14 +296,14 @@ function _parseSqlAll_SELECT(&$sqlTree, $mysqlConn = false, $zendAdapter = false
 			if($tableFullName === false) {
 				//add everything *ed from all tables to this query
 				foreach($sqlTree['FROM'] as $fromNode) {
-					if($fromNode['expr_type'] == "table") {
+					if(isTable($fromNode)) {
 						$table[] = $fromNode['table'];
-						if($fromNode['alias'] === false) {
+						if(!hasAlias($fromNode)) {
 							$alias[] = $fromNode['table'];
 						} else {
 							$alias[] = $fromNode['alias']['name'];
 						}
-					} else if ($fromNode['expr_type'] == "subquery") {
+					} else if (isSubquery($fromNode)) {
 						//handle subqueries...
 						_parseSqlAll_linkSubquerySELECT($fromNode['sub_tree'], $sqlTree, $fromNode['alias']['name']);
 					}
@@ -317,8 +312,8 @@ function _parseSqlAll_SELECT(&$sqlTree, $mysqlConn = false, $zendAdapter = false
 				foreach($sqlTree['FROM'] as $fromNode) {
 				    //it could be, that the table here is actually another aliased table (which should
 				    //have been processed here already, since SELECT is called last) -> link to tree
-				    if($fromNode['expr_type'] == "table") {
-				    	if($fromNode['alias'] !== false) {
+				    if(isTable($fromNode)) {
+				    	if(hasAlias($fromNode)) {
 							if(trim($fromNode['alias']['name'], "`") === $tableName) {
 							    $table[] = $fromNode['table'];
 							    break;
@@ -329,7 +324,7 @@ function _parseSqlAll_SELECT(&$sqlTree, $mysqlConn = false, $zendAdapter = false
 							    break;
 							}
 						}
-				    } else if ($fromNode['expr_type'] == "subquery") {
+				    } else if (isSubquery($fromNode)) {
 						if(trim($fromNode['alias']['name'], "`") === $tableName) {
 						    _parseSqlAll_linkSubquerySELECT($fromNode['sub_tree'], $sqlTree, $tableName);
 				    		continue 2;
@@ -370,15 +365,25 @@ function _parseSqlAll_linkSubquerySELECT(&$subtreeNode, &$resultTree, $alias) {
 								  "name" => "",
 								  "base_expr" => "as ");
 		foreach($tmp as $element) {
+			$selNode['no_quotes'] = array("delim" => ".", "parts" => array());
+			$selNode['alias']['no_quotes'] = array("delim" => ".", "parts" => array());
+
 			if($count === 0) {
 				$selNode['base_expr'] = "`" . $alias . "`.`" . $element;
+				$selNode['no_quotes']['parts'] = array($alias, trim($element, "`"));
 				$selNode['alias']['name'] = "`" . $alias . "__" . $element;
+				$selNode['alias']['no_quotes']['parts'] = array($alias . "__" . trim($element, "`"));
 			} else {
 				$selNode['base_expr'] .= "__" . $element;
 				$selNode['alias']['name'] .= "__" . $element;
 			}
 
 			$count += 1;
+		}
+
+		if(empty($selNode['no_quotes']['parts'])) {
+			$selNode['no_quotes']['parts'][] = $selNode['base_expr'];
+			$selNode['alias']['no_quotes']['parts']['parts'][] = $selNode['alias']['name'];
 		}
 
 		$selNode['base_expr'] .= "`";
@@ -436,12 +441,17 @@ function _parseSqlAll_getColsMysqlii(&$sqlTree, &$node, $mysqlConn, $table, $ali
 		    //this is the item we change
 		    if($alias === false) {
 				$node['base_expr'] = $row[0];
+				$node['no_quotes'] = array("delim" => ".", "parts" => array($row[0]));
 		    } else {
 				$node['base_expr'] = $alias . "." . $row[0];
+				$node['no_quotes'] = array("delim" => ".", "parts" => array($alias, $row[0]));
 				$node['alias'] = array("as" => true,
 								   "name" => "`" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`",
-								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`");
+								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`",
+								   "no_quotes" => array("delim" => ".", "parts" => array(str_replace(".", "__", str_replace("`", "", $node['base_expr'])))));
 		    }
+
+		    $node['delim'] = ",";
 		    $nodeTemplate = $node;
 
 		    array_push($sqlTree['SELECT'], $node);
@@ -449,11 +459,14 @@ function _parseSqlAll_getColsMysqlii(&$sqlTree, &$node, $mysqlConn, $table, $ali
 		    $newNode = $nodeTemplate;			//this is set on the first passing when count is 0
 		    if($alias === false) {
 				$newNode['base_expr'] = $row[0];
+				$newNode['no_quotes'] = array("delim" => ".", "parts" => array($row[0]));
 		    } else {
 				$newNode['base_expr'] = $alias . "." . $row[0];
+				$newNode['no_quotes'] = array("delim" => ".", "parts" => array($alias, $row[0]));
 				$newNode['alias'] = array("as" => true,
 								   "name" => "`" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`",
-								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`");
+								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`",
+								   "no_quotes" => array("delim" => ".", "parts" => array(str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])))));
 		    }
 		    
 		    array_push($sqlTree['SELECT'], $newNode);
@@ -473,12 +486,16 @@ function _parseSqlAll_getColsZend(&$sqlTree, &$node, $zendAdapter, $table, $alia
 		    //this is the item we change
 		    if($alias === false || empty($alias)) {
 				$node['base_expr'] = $row['Field'];
+				$node['no_quotes'] = array("delim" => ".", "parts" => array($row['Field']));
 		    } else {
 				$node['base_expr'] = $alias . "." . $row['Field'];
+				$node['no_quotes'] = array("delim" => ".", "parts" => array($alias, $row['Field']));
 				$node['alias'] = array("as" => true,
 								   "name" => "`" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`",
-								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`");
+								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $node['base_expr'])) . "`",
+								   "no_quotes" => array("delim" => ".", "parts" => array(str_replace(".", "__", str_replace("`", "", $node['base_expr'])))));
 		    }
+		    $node['delim'] = ",";
 		    $nodeTemplate = $node;
 
 		    array_push($sqlTree['SELECT'], $node);
@@ -486,11 +503,14 @@ function _parseSqlAll_getColsZend(&$sqlTree, &$node, $zendAdapter, $table, $alia
 		    $newNode = $nodeTemplate;			//this is set on the first passing when count is 0
 		    if($alias === false || empty($alias)) {
 				$newNode['base_expr'] = $row['Field'];
+				$newNode['no_quotes'] = array("delim" => ".", "parts" => array($row['Field']));
 		    } else {
 				$newNode['base_expr'] = $alias . "." . $row['Field'];
+				$newNode['no_quotes'] = array("delim" => ".", "parts" => array($alias, $row['Field']));
 				$newNode['alias'] = array("as" => true,
 								   "name" => "`" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`",
-								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`");
+								   "base_expr" => "as `" . str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])) . "`",
+								   "no_quotes" => array("delim" => ".", "parts" => array(str_replace(".", "__", str_replace("`", "", $newNode['base_expr'])))));
 		    }
 		    
 		    array_push($sqlTree['SELECT'], $newNode);

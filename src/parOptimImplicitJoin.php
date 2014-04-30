@@ -29,7 +29,7 @@
 
 	error_reporting(E_ALL);
 
-if(!class_exists("PHPSQLParser"))
+if(!class_exists("\PHPSQLParser\PHPSQLParser"))
 	require_once 'php-sql-parser/src/PHPSQLParser/PHPSQLParser.php';
 
 	require_once 'paquUtils.php';
@@ -132,7 +132,7 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 		$subQuery['sub_tree'] = PHPSQLbuildShardQuery($subQuery['sub_tree']);
 	}
 
-//var_dump($sqlTree); die(0);
+var_dump($sqlTree); die(0);
 	$newSqlTree = PHPSQLGroupWhereTerms($sqlTree);
 //var_dump($newSqlTree); die(0);
 	$listOfTables = array();
