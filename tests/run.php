@@ -123,6 +123,10 @@ echo runTest("select host.*, sub.*, `host`.bdmId  AS `host__bdmId`, `host`.Mvir 
 echo "Test 38\n";
 echo runTest("SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfId_DM FROM Clues3_LGGas.AHFMatch as m, Clues3_LGGas.AHF as gas, Clues3_LGDM.AHF as dm WHERE m.ahfId_Gas = gas.ahfId AND m.ahfId_DM = dm.ahfId ORDER BY gas.Mvir DESC LIMIT 10", "test38.ref");
 
+//Test39
+echo "Test 39\n";
+echo runTest("select `m`.`RAVE_OBS_ID` as `m__RAVE_OBS_ID`, `n`.`Fieldname` as `n__Fieldname` from `RAVEPUB_DR3`.`chemical_pipe_VDR3` as `m`, `RAVEPUB_DR3`.`MAP_RAVEID` as `n` limit 10", "test39.ref");
+
 
 
 ?>

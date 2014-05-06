@@ -132,29 +132,21 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 		$subQuery['sub_tree'] = PHPSQLbuildShardQuery($subQuery['sub_tree']);
 	}
 
-var_dump($sqlTree); die(0);
 	$newSqlTree = PHPSQLGroupWhereTerms($sqlTree);
-//var_dump($newSqlTree); die(0);
+
 	$listOfTables = array();
 	PHPSQLGroupTablesAndCols($newSqlTree, $listOfTables);
-//var_dump($listOfTables); die(0);
+
 	$dependantList = PHPSQLGroupWhereCond($newSqlTree, $listOfTables);
-//var_dump($listOfTables); die(0);
-//var_dump($dependantList); die(0);
 
 	PHPSQLCountWhereConditions($listOfTables);
-//var_dump($listOfTables); die(0);
 	$listOfTables = PHPSQLdetStartTable($listOfTables, $headNodeTables, $dependantList);
-//var_dump($listOfTables);
-//var_dump($dependantList); //die(0);
 
 	$nestedQuery = PHPSQLbuildNestedQuery($newSqlTree, $listOfTables, $dependantList, 0);
-//var_dump($nestedQuery); //die(0);
+
 	#link subqueries
 	linkSubqueriesToTree($nestedQuery, $subQueries);
-//var_dump($nestedQuery); //die(0);
 	linkNestedWheresToTree($nestedQuery, $subQueries);
-//var_dump($nestedQuery); //die(0);
 
 	return $nestedQuery;
 }
@@ -542,7 +534,7 @@ function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $
 			//this expression is now to be treated as a normal column, so apply changes
 			$node['expr_type'] = 'colref';
 			$node['sub_tree'] = false;
-			$node['no_quotes'] = array("delim" => ".", "parts" => array($tblAlias['name'], extractColumnAlias($node)));
+			$node['no_quotes'] = array("delim" => ".", "parts" => array(trim($tblAlias['name'], "`"), extractColumnAlias($node)));
 			$node['base_expr'] = getBaseExpr($node);
 		}
 
@@ -551,13 +543,13 @@ function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $
 		if ($tblAlias !== false && strpos($tblAlias['no_quotes']['parts'][0], 'agr_')) {
 			continue 1;
 		} else if(hasAlias($node)) {
-			setNoQuotes($node, array($tblAlias['name'], implodeNoQuotes($node['alias']['no_quotes'])));
+			setNoQuotes($node, array(trim($tblAlias['name'], "`"), implodeNoQuotes($node['alias']['no_quotes'])));
 		} else {
 			//if this is a node with a subtree, create an alias for it
 			if(hasSubtree($node)) {
-				setNoQuotes($node, array($tblAlias['name'], buildEscapedString(array($node))));
+				setNoQuotes($node, array(trim($tblAlias['name'], "`"), buildEscapedString(array($node))));
 			} else {
-				setNoQuotes($node, array($tblAlias['name'], implodeNoQuotes($node['no_quotes'])));
+				setNoQuotes($node, array(trim($tblAlias['name'], "`"), implodeNoQuotes($node['no_quotes'])));
 			}
 		}
 

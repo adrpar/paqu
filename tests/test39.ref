@@ -1,0 +1,5 @@
+CALL paquExec('SELECT `m`.`RAVE_OBS_ID` AS `m__RAVE_OBS_ID` FROM `RAVEPUB_DR3`.`chemical_pipe_VDR3` AS `m` ', 'aggregation_tmp_60819146')
+CALL paquExec('SELECT `n`.`Fieldname` AS `n__Fieldname`,`m`.`m__RAVE_OBS_ID` AS `m__RAVE_OBS_ID` FROM `RAVEPUB_DR3`.`MAP_RAVEID` AS `n` JOIN ( SELECT `m__RAVE_OBS_ID` FROM `aggregation_tmp_60819146`   ) AS `m`   LIMIT 0,10', 'aggregation_tmp_52468262')
+CALL paquDropTmp('aggregation_tmp_60819146')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT `n__Fieldname`,`m__RAVE_OBS_ID` FROM `aggregation_tmp_52468262`    LIMIT 0,10
+CALL paquDropTmp('aggregation_tmp_52468262')
