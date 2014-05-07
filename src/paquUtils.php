@@ -531,6 +531,9 @@ function rewriteTableNameInSubqueries(&$subTree, $toThisTableName, $exceptThisTa
 function setNoQuotes(&$node, array $parts, $delim = false) {
 	if($delim !== false) {
 		$node['no_quotes']['delim'] = $delim;
+	} else if (count($parts) > 1) {
+		//apply a default delimiter
+		$node['no_quotes']['delim'] = ".";
 	}
 
 	$node['no_quotes']['parts'] = $parts;

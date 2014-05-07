@@ -113,7 +113,6 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 	#check for subqueries
 	#this handles nested subqueries that the user already provided. no idea how to handle these
 	#together with the automatic joins found below...
-//var_dump($sqlTree); die(0);
 
 	//before we start with anything, we are going to rewrite any possitional argument in order by 
 	//with the corresponding given column
@@ -1360,7 +1359,19 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
 					}
 				}
 
-				array_push($returnArray, $node);
+				//if this is a function/aggregate that applies to a '*' "column", then only apply this at the
+				//outermost level (i.e. reclevel=0) and not before (see Test40 for case where this applies)
+				$canAddThisNode = true;
+				foreach($currColArray as $column) {
+					if($column['base_expr'] === "*" && $recLevel != 0) {
+						$canAddThisNode = false;
+						break;
+					}
+				}
+
+				if($canAddThisNode === true) {
+					array_push($returnArray, $node);
+				}
 			}
 
 			//add columns if not yet added, but only if there are dependant columns evolved
@@ -1390,9 +1401,7 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
 
 			if ($currTable === $tblAlias || ($currTable === false) || $currTable === $tblName || 
 						 $tblAlias === $currDB . "." . $currTable) {
-				//if ($startBranch === true) {
 					array_push($returnArray, $node);
-				//}
 			} else {
 				#check if this table has already been selected and processed. if yes, we can already process it and
 				#donot need to wait

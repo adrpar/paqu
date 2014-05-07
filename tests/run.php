@@ -127,6 +127,9 @@ echo runTest("SELECT gas.ahfId, gas.Mvir, dm.ahfId, dm.Mvir, m.ahfId_Gas, m.ahfI
 echo "Test 39\n";
 echo runTest("select `m`.`RAVE_OBS_ID` as `m__RAVE_OBS_ID`, `n`.`Fieldname` as `n__Fieldname` from `RAVEPUB_DR3`.`chemical_pipe_VDR3` as `m`, `RAVEPUB_DR3`.`MAP_RAVEID` as `n` limit 10", "test39.ref");
 
+//Test40
+echo "Test 40\n";
+echo runTest("select a, count(*) from t1, t2, t3 where t1.id = t2.t1_id and t3.id = t2.date_id group by a", "test40.ref");
 
 
 ?>
