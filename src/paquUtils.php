@@ -516,6 +516,11 @@ function rewriteTableNameInSubqueries(&$subTree, $toThisTableName, $exceptThisTa
 			$currTable = extractTableName($node);
 
 			if($currTable !== $exceptThisTableName) {
+				//if there is a * in the subquery somewhere
+				if(!array_key_exists("no_quotes", $node)) {
+					$node['no_quotes'] = array("delim" => ".", "parts" => array());
+				}
+
 				$node['no_quotes']['parts'] = array($toThisTableName, implodeNoQuotes($node['no_quotes']));
 				$node['base_expr'] = getBaseExpr($node);
 			}
