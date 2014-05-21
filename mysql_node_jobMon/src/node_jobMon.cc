@@ -164,23 +164,29 @@ pthread_handler_t paqu_daemon(void *p) {
 
             getLocalProcesslist(&thdList);
             if (!getRemoteProcesslist(mysql, &thdRemoteList)) {
-                //loop through all processes on remote to find a killed query
+                //loop through all processes on remote to find a killed query                                                                         
+                paquThread_info *currLocThd = NULL;
+                for (int i = 0; i < thdList->len; i++) {
+                    bool found = false;
+                    currLocThd = thdList->array[i];
 
-                for (int i = 0; i < thdRemoteList->len; i++) {
-                    currThd = thdRemoteList->array[i];
-                    if (currThd->paqu_qid != -1) {
-                        if (currThd->killed == TRUE) {
-                            //loop through all local processes to find query with matching paqu_qid
+                    //is this a paqu thread?                                                                                                          
+                    if(currLocThd->paqu_qid != -1) {
+                        continue;
+                    }
 
-                            paquThread_info *currLocThd;
-                            for (int j = 0; j < thdList->len; j++) {
-                                currLocThd = thdList->array[j];
-                                if (currLocThd->paqu_qid == currThd->paqu_qid && currLocThd->paqu_qid != -1) {
-                                    //KILL THIS THREAD!
-                                    sql_kill(currLocThd->thd, currLocThd->thd_id, 1);
-                                }
-                            }
+                    //find the thread on the remote                                                                                                   
+                    for (int j = 0; j < thdRemoteList->len; j++) {
+                        currThd = thdRemoteList->array[j];
+                        if (currLocThd->paqu_qid == currThd->paqu_qid && currLocThd->paqu_qid != -1) {
+                            found = true;
+                            break;
                         }
+                    }
+
+                    if( (found == true && currThd->killed == TRUE) || found == false ) {
+                        //KILL THIS THREAD!                                                                                                           
+                        sql_kill(currLocThd->thd, currLocThd->thd_id, 1);
                     }
                 }
             } else {

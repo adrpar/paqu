@@ -113,7 +113,7 @@ function PHPSQLbuildShardQuery($sqlTree, $headNodeTables = array()) {
 	#check for subqueries
 	#this handles nested subqueries that the user already provided. no idea how to handle these
 	#together with the automatic joins found below...
-
+var_dump($sqlTree); die(0);
 	//before we start with anything, we are going to rewrite any possitional argument in order by 
 	//with the corresponding given column
 	$sqlTree = PHPSQLresolvePositionalArguments($sqlTree);

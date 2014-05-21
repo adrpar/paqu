@@ -48,12 +48,12 @@ require_once 'mysqlii.php';
  */
 
 class ParallelQuery {
-    private $defConnect = "mysql://root:spider@127.0.0.1:3306";	    //!< Connection string to the server USING spider
+    private $defHeadConnectionString = "mysql://root:spider@120.0.0.1:3306";    //!< Connection string from outside the cluster to the head node
     private $evalQueryTimeout = 1000;				    //!< Timeout for evaluating SQL syntax of the query
 
     private $defDB = "spider_tmp_shard";			    //!< Temporary database where federated tables are written to
     private $defEngine = "MyISAM";				    //!< Default engine to use for federated temporary tables
-    private $defConnectOnServerSite = "mysql://root:spider@120.0.0.1:3306";    //!< Connection string of the spider head node
+    private $defNodesConnectToHead = "mysql://root:spider@120.0.0.1:3306";    //!< Connection string of the spider head node
     private $defSpiderUsr = "msandbox";				    //!< User on the spider nodes side
     private $defSpiderPwd = "msandbox";				    //!< Password to access spider nodes
     private $fedEngine = "federated";				    //!< Federated tables engine to use
@@ -94,7 +94,11 @@ class ParallelQuery {
     }
 
     function setConnectOnServerSite($value) {
-        $this->defConnectOnServerSite = $value;
+        $this->defNodesConnectToHead = $value;
+    }
+
+    function setHeadConnectionString($value) {
+        $this->defHeadConnectionString = $value;
     }
 
     function setSpiderUsr($value) {
@@ -296,7 +300,7 @@ class ParallelQuery {
                         
                 $shardCreateFedTable = $query_id . " SELECT spider_bg_direct_sql('CREATE DATABASE IF NOT EXISTS ". $this->defDB .
                                         "; " . $query_id . " CREATE TABLE ". $this->defDB ."." . $matches[2] . 
-                                        " ENGINE=" . $this->fedEngine . " CONNECTION=\"" . $this->defConnectOnServerSite . "/". $this->defDB . "/" . $matches[2] . "\" " . 
+                                        " ENGINE=" . $this->fedEngine . " CONNECTION=\"" . $this->defNodesConnectToHead . "/". $this->defDB . "/" . $matches[2] . "\" " . 
                                         $limitFreeQuery . " LIMIT 0;', '', concat('host \"', `__sp__`.host ,'\", port \"', `__sp__`.port ,'\", user \"". $this->defSpiderUsr ."\"";
                 
                 if(!empty($this->defSpiderPwd)) {
@@ -324,7 +328,7 @@ class ParallelQuery {
 
                 $shardCreateFedTable .= $query_id . " SELECT spider_bg_direct_sql(concat('CREATE DATABASE IF NOT EXISTS ". $this->defDB .
                                         "; " . $query_id . " CREATE TABLE ". $this->defDB ."." . $matches[1] . " (', @a, ')" . 
-                                        " ENGINE=" . $this->fedEngine . " CONNECTION=\"" . $this->defConnectOnServerSite . "/". $this->defDB . "/" . $matches[1] . "\" " . 
+                                        " ENGINE=" . $this->fedEngine . " CONNECTION=\"" . $this->defNodesConnectToHead . "/". $this->defDB . "/" . $matches[1] . "\" " . 
                                         "'), '', concat('host \"', `__sp__`.host ,'\", port \"', `__sp__`.port ,'\", user \"". $this->defSpiderUsr ."\"";
                 
                 if(!empty($this->defSpiderPwd)) {
@@ -510,7 +514,7 @@ class ParallelQuery {
      */
     private function connectToDB() {
         if($this->connection === false) {
-            preg_match('~mysql://([^:@/]*):?([^@/]*)@?([^/:]*):?([^/]*)/?([^/]*)~', $this->defConnect, $tmp);
+            preg_match('~mysql://([^:@/]*):?([^@/]*)@?([^/:]*):?([^/]*)/?([^/]*)~', $this->defHeadConnectionString, $tmp);
             
             $usr = $tmp[1];
             $pwd = $tmp[2];

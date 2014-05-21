@@ -26,6 +26,9 @@ To have an idea how to use PaQu, have a look at paraQuery.php until I find the t
 write a detailed introduction on how to use PaQu. Or use the Daiquiri web framework
 (escience.aip.de/daiquiri) to interface to your Spider database from the web using PaQu.
 
+A command line tool is also provided to run queries against a predefined server setting. The command
+line tool is in paqu.php.
+
 
 In order to use PaQu you need to compile the following MySQL extensions (see below for instructions
 or the README in the respective directories):
