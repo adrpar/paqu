@@ -8,8 +8,8 @@ require_once 'mysqlii.php';
 ############ SERVER CONFIGURATION ############
 ##############################################
 
-$cmdlineToHeadConnectionString	= "mysql://root:spider@120.0.0.1:3306";
-$nodesToHeadConnectionString	= "mysql://root:spider@120.0.0.1:3306";
+$cmdlineToHeadConnectionString	= "mysql://root:spider@127.0.0.1:3306";
+$nodesToHeadConnectionString	= "mysql://root:spider@127.0.0.1:3306";
 $database 						= "spider_tmp_shard";
 $user 							= "spider";
 $password 						= "spider";
