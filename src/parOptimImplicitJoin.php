@@ -1053,7 +1053,7 @@ function PHPSQLaddOuterQueryOrder(&$sqlTree, &$table, &$toThisNode, &$tableList,
 			#it might be, that this column has been aliased, so take care of that
 			$find = false;
 			foreach ($toThisNode['SELECT'] as $selNode) {
-				if (columnIsEqual($selNode['base_expr'], $node['base_expr']) || ( hasAlias($selNode) &&
+				if (columnIsEqual($selNode, $node) || ( hasAlias($selNode) &&
 							 trim($selNode['alias']['name'], "`") == trim($node['base_expr'], "`") ) ) {
 
 					$find = true;
