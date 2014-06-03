@@ -1,0 +1,8 @@
+CREATE DATABASE IF NOT EXISTS spider_tmp_shard; USE spider_tmp_shard; CREATE TABLE spider_tmp_shard.aggregation_tmp_55211374 ENGINE=MyISAM SELECT `a` AS `a`,`t1_id` AS `t1_id`,`date_id` AS `date_id` FROM bar GROUP BY a  LIMIT 0
+USE spider_tmp_shard; INSERT INTO spider_tmp_shard.aggregation_tmp_55211374 SELECT `a` AS `a`,`t1_id` AS `t1_id`,`date_id` AS `date_id` FROM bar GROUP BY a ; CALL paquLinkTmp('aggregation_tmp_55211374')
+CALL paquExec('SELECT `id` AS `id`,`bar`.`a` AS `a` FROM t3 JOIN ( SELECT `a`,`t1_id`,`date_id` FROM `aggregation_tmp_55211374`  GROUP BY `a`  ) AS `bar`  WHERE ( `t3`.`id` = `bar`.`date_id` )   ', 'aggregation_tmp_97654500')
+CALL paquExec('SELECT COUNT(*) AS `_count_*_`,`t3`.`a` AS `a` FROM t1 JOIN ( SELECT `id`,`a` FROM `aggregation_tmp_97654500`   ) AS `t3`  WHERE ( `t1`.`id` = `t3`.`bar.t1_id` )   ', 'aggregation_tmp_27038359')
+CALL paquDropTmp('aggregation_tmp_55211374')
+CALL paquDropTmp('aggregation_tmp_97654500')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT SUM(`_count_*_`) AS `_count_*_`,`a` FROM `aggregation_tmp_27038359`   
+CALL paquDropTmp('aggregation_tmp_27038359')

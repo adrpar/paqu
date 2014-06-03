@@ -131,5 +131,8 @@ echo runTest("select `m`.`RAVE_OBS_ID` as `m__RAVE_OBS_ID`, `n`.`Fieldname` as `
 echo "Test 40\n";
 echo runTest("select a, count(*) from t1, t2, t3 where t1.id = t2.t1_id and t3.id = t2.date_id group by a", "test40.ref");
 
+//Test42
+echo "Test 42\n";
+echo runTest("select a, count(*) from t1, bar, t3 where t1.id=bar.t1_id and t3.id=bar.date_id group by a", "test42.ref");
 
 ?>

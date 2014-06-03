@@ -352,6 +352,7 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 	PHPSQLaddOuterQueryOrder($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
 	PHPSQLaddOuterQueryWhere($sqlTree, $table, $currOuterQuery, $tableList, $recLevel, $currInnerNode);
+//var_dump($currOuterQuery);
 
 	PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery, $recLevel);
 	PHPSQLaddOuterQueryIndex($sqlTree, $table, $currOuterQuery);
@@ -582,7 +583,7 @@ function rewriteWHEREAliasToFirstSubquery(&$tree, $aliasList, $firstSubqueryAlia
 				$currTableAlias = $node['no_quotes']['parts'];
 				if(!in_array($currTableAlias[0], $aliasList)) {
 					unset($currTableAlias[0]);
-					setNoQuotes($node, array($firstSubqueryAlias['name'], implode(".", $currTableAlias)));
+					setNoQuotes($node, array(trim($firstSubqueryAlias['name'], "`"), implode(".", $currTableAlias)));
 				}
 			}
 		}
