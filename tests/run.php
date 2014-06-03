@@ -139,5 +139,9 @@ echo runTest("select a, count(*) from t1, t2, bar where t1.id = t2.t1_id and bar
 echo "Test 42\n";
 echo runTest("select a, count(*) from t1, bar, t3 where t1.id=bar.t1_id and t3.id=bar.date_id group by a", "test42.ref");
 
+//Test43
+echo "Test 43\n";
+echo runTest("select distinct Obsdate, FieldName, FiberNumber from RAVEPUB_DR3.chemical_pipe_VDR3 limit 10", "test43.ref");
+
 
 ?>

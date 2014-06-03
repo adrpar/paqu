@@ -73,12 +73,13 @@ class ShardQuery {
     #To do this create process_select_expr and then iterate (possively recursively) 
     #over all expressions in the select calling that function
 
-    function process_select($select, $recLevel, $straight_join = false, $distinct = false, $whereSubquery = false) {
+    function process_select($select, $recLevel, $straight_join = false, $whereSubquery = false) {
 		$error = array();
 		$shard_query = "";   #Query to send to each shard
 		$coord_query = "";   #Query to send to the coordination node
 
 		$avg_count = 0;
+		$distinct = false;
 
 		$group = array();  #list of positions which contain non-aggregate functions
 		$push_group = array();   #this is necessary for non-distributable aggregate functions
@@ -86,6 +87,13 @@ class ShardQuery {
 
 		$is_aggregate = false;
 		$coord_odku = array();
+
+		//check for distinct keyword (should be the first in the list)
+		if(isReserved($select[0]) && $select[0]['base_expr'] === "distinct") {
+			$distinct = true;
+			unset($select[0]);
+			$select = array_values($select);
+		}
 
 		if($distinct === true) {
 		    $shard_query .= "DISTINCT ";
@@ -787,14 +795,10 @@ function process_sql($sql, $recLevel = 0, $whereSubquery = false) {
 			    $straight_join = true;
 			} 
 		
-			if (in_array('DISTINCT', $this->parsed['OPTIONS'])) {
-			    $distinct = true;
-			}
-		
 			unset($this->parsed['OPTIONS']);
 	    }
 
-	    $select = $this->process_select($this->parsed['SELECT'], $recLevel, $straight_join, $distinct, $whereSubquery);
+	    $select = $this->process_select($this->parsed['SELECT'], $recLevel, $straight_join, $whereSubquery);
 
 	    if (!empty($select['error'])) {
 			$this->errors = $select['error'];

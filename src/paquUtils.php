@@ -496,6 +496,14 @@ function isColref($node) {
 	}
 }
 
+function isReserved($node) {
+	if(isset($node['expr_type']) && $node['expr_type'] === 'reserved') {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 function isTable($node) {
 	if(isset($node['expr_type']) && $node['expr_type'] === 'table') {
 		return true;

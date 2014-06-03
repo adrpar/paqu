@@ -1,0 +1,3 @@
+CALL paquExec('SELECT DISTINCT `Obsdate` AS `Obsdate`,`FieldName` AS `FieldName`,`FiberNumber` AS `FiberNumber` FROM RAVEPUB_DR3.chemical_pipe_VDR3  LIMIT 0,10', 'aggregation_tmp_38580938')
+USE spider_tmp_shard; CREATE TABLE TEST.TEST ENGINE=MyISAM SELECT DISTINCT `Obsdate`,`FieldName`,`FiberNumber` FROM `aggregation_tmp_38580938`    LIMIT 0,10
+CALL paquDropTmp('aggregation_tmp_38580938')

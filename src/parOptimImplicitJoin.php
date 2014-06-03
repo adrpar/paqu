@@ -352,7 +352,6 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
 	PHPSQLaddOuterQueryOrder($sqlTree, $table, $currOuterQuery, $tableList, $recLevel);
 
 	PHPSQLaddOuterQueryWhere($sqlTree, $table, $currOuterQuery, $tableList, $recLevel, $currInnerNode);
-//var_dump($currOuterQuery);
 
 	PHPSQLaddOuterQueryLimit($sqlTree, $table, $currOuterQuery, $recLevel);
 	PHPSQLaddOuterQueryIndex($sqlTree, $table, $currOuterQuery);
@@ -403,6 +402,10 @@ function PHPSQLbuildNestedQuery(&$sqlTree, &$tableList, &$dependantWheres, $recL
  */
 function cleanSelectToResembleQuery(&$initialQuery, &$newQuery) {
 	foreach($newQuery['SELECT'] as $key => &$node) {
+		if(isReserved($node)) {
+			continue;
+		}
+
 		if(hasAlias($node)) {
 			$colTable = extractTableAlias($node);
 			$colName = extractColumnAlias($node);
@@ -1324,7 +1327,7 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
 	}
 
 	foreach ($workload as $node) {
-		if (!isColref($node) && !isOperator($node)) {
+		if (!isColref($node) && !isOperator($node) && !isReserved($node)) {
 			$currCountDiffTables = false;
 			$currColArray = array();
 			if(hasSubtree($node))	 {
@@ -1423,6 +1426,9 @@ function PHPSQLcollectColumns($sqlSelect, $tblDb, $tblName, $tblAlias, &$returnA
 					$countDiffTables += 1;
 				}
 			}
+		} else if (isReserved($node)) {
+			//always adding reserved keywords to each select statement we issue
+			array_push($returnArray, $node);
 		}
 	}
 
