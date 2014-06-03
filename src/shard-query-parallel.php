@@ -89,7 +89,7 @@ class ShardQuery {
 		$coord_odku = array();
 
 		//check for distinct keyword (should be the first in the list)
-		if(isReserved($select[0]) && $select[0]['base_expr'] === "distinct") {
+		if(isReserved($select[0]) && strtolower($select[0]['base_expr']) === "distinct") {
 			$distinct = true;
 			unset($select[0]);
 			$select = array_values($select);
