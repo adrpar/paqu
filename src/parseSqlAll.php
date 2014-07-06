@@ -249,7 +249,7 @@ function _parseSqlAll_WHERE(&$sqlTree, $mysqlConn = false, $zendAdapter = false)
     foreach($sqlTree['WHERE'] as &$node) {
 		if(isSubquery($node)) {
 		    $tree = processQueryWildcard($node['sub_tree'], $mysqlConn, $zendAdapter);
-	    	    $node['sub_tree'] = $tree->parsed;
+	    	    $node['sub_tree'] = $tree;
 		}
     }
 }
