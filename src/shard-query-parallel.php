@@ -108,10 +108,6 @@ class ShardQuery {
 		    if ($coord_query && $pos != 0)
 				$coord_query .= ",";
 
-		    /*if (!empty($clause['base_expr']) && $clause['base_expr'] == "*") {
-				$error[] = array('error_clause' => '*', 'error_reason' => '"SELECT *" is not supported');
-				continue;
-		    }*/
 		    if(isset($clause['alias']['name']) && !empty($clause['alias']['name'])) {
 			    $alias = "`" . trim($clause['alias']['name'], "`") . "`";
 		    } else {
@@ -325,7 +321,7 @@ class ShardQuery {
 		    		if($clause['expr_type'] === 'function' && strpos($base_expr, "(") === false) {
 					    $base_expr = getBaseExpr($clause);
 		    		}
-		    		//var_dump($alias); die(0);
+
 				    $shard_query .= $base_expr . ' AS ' . $alias;
 
 					#if this is a temporary column used for grouping, don't select it in the coordination query
