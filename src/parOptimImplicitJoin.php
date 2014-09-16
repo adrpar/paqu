@@ -546,7 +546,12 @@ function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $
 		if ($tblAlias !== false && strpos($tblAlias['no_quotes']['parts'][0], 'agr_')) {
 			continue 1;
 		} else if(hasAlias($node)) {
-			setNoQuotes($node, array(trim($tblAlias['name'], "`"), implodeNoQuotes($node['alias']['no_quotes'])));
+			#handle a case, when the subquery has no aliased from, then generating a new alias is unnecessary
+			$subquery = $currInnerNode['sub_tree']['FROM'][0]['sub_tree'];
+			if(!($subquery != false && hasAlias($subquery['FROM'][0]) == false)) {
+				setNoQuotes($node, array(trim($tblAlias['name'], "`"), implodeNoQuotes($node['alias']['no_quotes'])));
+			}
+
 		} else {
 			//if this is a node with a subtree, create an alias for it
 			if(hasSubtree($node)) {
@@ -558,6 +563,7 @@ function linkInnerQueryToOuter(&$currOuterQuery, &$currInnerNode, &$tableList, $
 
 		if (!array_key_exists('where_col', $node) && !array_key_exists('order_clause', $node) && !array_key_exists('group_clause', $node)) {
 			array_push($currOuterQuery['SELECT'], $node);
+			#var_dump($node); die(0);
 		}
 	}
 

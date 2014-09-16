@@ -143,5 +143,8 @@ echo runTest("select a, count(*) from t1, bar, t3 where t1.id=bar.t1_id and t3.i
 echo "Test 43\n";
 echo runTest("select distinct Obsdate, FieldName, FiberNumber from RAVEPUB_DR3.chemical_pipe_VDR3 limit 10", "test43.ref");
 
+//Test44
+echo "Test 44\n";
+echo runTest("select fp.fofId, p.particleId,p.x,p.y,p.z from (select fofId, particleId from MDR1.FOFParticles where fofId between 85000000000 and 85000000010) as fp, MDR1.Particles85 as p where fp.particleId = p.particleId and sprng_dbl(1234) < 0.0001", "test44.ref");
 
 ?>
