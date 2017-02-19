@@ -35,14 +35,14 @@
 class MySQLIIException extends Exception {
     public $mysql_error = "";
     public $mysql_errno = 0;
-    
+
     public function __construct($mysql_error, $mysql_errno, $code=0) {
     	parent::__construct($mysql_error, $code);
-    	
+
     	$this->mysql_error = $mysql_error;
     	$this->mysql_errno = $mysql_errno;
     }
-    
+
     /**
      * @brief Returns a nicely formated string with the according mysql error message.
      */
@@ -59,14 +59,14 @@ class MySQLIIException extends Exception {
  * Two connections to the database are openend by the class, one for the actual query and
  * another one for monitoring the execution time of the other. If the query time exceed a
  * given value, a kill command is transmitted to the server through the second connection.
- * 
+ *
  * NOTE: THIS CLASS NEEDS php5.4 OR AN MYSQLI VERSION COMPILED WITH ASYNC QUERIES!
  */
 class mysqlii extends mysqli {
     public $queryTimeout = 60000;		    //!< Query timeout in milliseconds!
-    
-    public $killConnection = null; 
-    
+
+    public $killConnection = null;
+
     public function __construct($host = false, $user = false, $pass = false, $dbname = "", $port = false, $socket = false) {
     	if($host === false && $socket === false)
     	    $host = ini_get("mysqli.default_host");
@@ -78,11 +78,11 @@ class mysqlii extends mysqli {
     	    $port = ini_get("mysqli.default_port");
     	if($socket === false && $host === false)
     	    $socket = ini_get("mysqli.default_socket");
-    	
+
             parent::__construct($host, $user, $pass, $dbname, $port, $socket);
-    	
+
     	if($this->connect_error) {
-                throw new Expection('mysqlii: Connect Error (' . $this->connect_errno . ') '
+                throw new Exception('mysqlii: Connect Error (' . $this->connect_errno . ') '
                         . $this->connect_error);
 	   }
 
@@ -90,17 +90,17 @@ class mysqlii extends mysqli {
     	$this->killConnection = new mysqli($host, $user, $pass, $dbname, $port, $socket);
 
       if ($this->killConnection->connect_error) {
-          throw new Expection('mysqlii: Connect Error in Kill Connection (' . $this->killConnection->connect_errno . ') '
+          throw new Exception('mysqlii: Connect Error in Kill Connection (' . $this->killConnection->connect_errno . ') '
                   . $this->$killConnection->connect_error);
       }
     }
-    
+
     #inspired by stackoverflow question 7582485
     /**
      * @brief Query a database with a query time managed connection
      * @param query the actual query to run
      * @param resultmode as in mysqli
-     * 
+     *
      * This function will perform the given query if the connection to the DB is
      * successfully established. By running the query in asynchronuous mode it can
      * be monitored to check if a query exceeded the query time or not. If yes, the
@@ -109,18 +109,18 @@ class mysqlii extends mysqli {
      */
     public function query($query, $resultmode = MYSQLI_STORE_RESULT) {
     	parent::query($query, MYSQLI_ASYNC);
-    	
+
     	$thread_id = $this->thread_id;
-    	
+
     	$startTime = microtime(true);
-    	
+
     	do {
     	    $links = $errors = $reject = array($this);
-    	    
+
     	    $poll = $this->poll($links, $errors, $reject, 0, 500000);
-    	    
+
     	    $currTime = microtime(true);
-    	    
+
     	    if(($currTime - $startTime) * 1000 >= $this->queryTimeout) {
     		$this->killConnection->kill($thread_id);
     		throw new MySQLIIException("Query was killed due to query timeout.", 666);
@@ -128,29 +128,29 @@ class mysqlii extends mysqli {
     	} while (!$poll);
 
             $res = $this->reap_async_query();
-    	
+
     	if($links[0]->errno) {
     	    throw new MySQLIIException($links[0]->error, $links[0]->errno);
     	}
-    	
+
     	if(is_object($res)) {
     	    return $res;
     	} else {
     	    return true;
     	}
     }
-    
+
     public function noTimeOutQuery($query, $resultmode = MYSQLI_STORE_RESULT) {
     	return $this->killConnection->query($query, $resultmode);
     }
-    
+
     /**
      * @brief close connection to mysql db
-     * 
+     *
      */
     public function close() {
     	$this->killConnection->close();
-    	
+
     	parent::close();
     }
 }
